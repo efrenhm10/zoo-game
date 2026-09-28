@@ -9,5 +9,5 @@
 <script>
 ZG.Models.buildScenery();
 const g = document.getElementById('g');
-for (const id of Object.keys(ZG.SPECIES)) { const d = document.createElement('div'); d.innerHTML = ZG.Portraits.img(id, 'portrait lg') + `<span class="banner">${ZG.SPECIES[id].name}</span>`; g.appendChild(d); }
+for (const id of (location.hash ? location.hash.slice(1).split(',') : Object.keys(ZG.SPECIES))) { const d = document.createElement('div'); d.innerHTML = ZG.Portraits.img(id, 'portrait lg') + `<span class="banner">${ZG.SPECIES[id].name}</span>`; g.appendChild(d); }
 </script></body></html>

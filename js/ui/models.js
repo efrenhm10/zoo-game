@@ -623,7 +623,67 @@
     m.swims = true;
     return m;
   };
-  const SWIMMERS = ['hippo', 'sea_lion', 'river_otter', 'african_penguin', 'polar_bear', 'alligator', 'jaguar', 'water_monitor', 'pygmy_hippo', 'asian_elephant', 'flamingo', 'nene'];
+  // --- Species added for the real collections ---
+  V.black_rhino = () =>
+    quad({ L: 2.9, H: 1.4, W: 1.3, leg: 0.8, legR: 0.2, color: '#6f6862', neckLen: 0.7, neckAngle: 1.2, neckR: 0.45, head: [0.4, 0.42, 0.6], headPitch: 0.1, nose: false, stride: 0.32, gait: 0.9,
+      ears: { w: 0.1, h: 0.25 }, tail: { len: 0.5, r: 0.04, tuft: '#333' },
+      extra: (m) => {
+        m.head.add(mesh(G.cone, M.mat('#8a7f72'), [0, 0.25, 0.85], [0.11, 0.55, 0.11], [0.2, 0, 0]));
+        m.head.add(mesh(G.cone, M.mat('#8a7f72'), [0, 0.3, 0.5], [0.09, 0.35, 0.09], [0.1, 0, 0]));
+      } });
+  V.plains_zebra = zebraLike(M.tex.stripes('#f2efe6', '#161616', 14), '#f2efe6');
+  V.masai_giraffe = () => {
+    const tex = M.tex.patches('#6b3a1c', '#efe0c0');
+    return quad({ L: 2.2, H: 1.3, W: 1.0, frontLeg: 2.0, backLeg: 1.8, legR: 0.12, color: '#e8c996', map: tex, legMap: tex, neckMap: tex, neckLen: 2.3, neckAngle: 0.35, neckR: 0.22,
+      head: [0.22, 0.25, 0.45], headColor: '#9a6a3f', headPitch: 0.3, snout: 0.25, stride: 0.5, gait: 0.8, ears: { w: 0.08, h: 0.2 }, tail: { len: 0.9, r: 0.04, tuft: '#2a1d12' },
+      extra: (m) => { for (const sx of [1, -1]) m.head.add(mesh(G.cyl, M.mat('#3a2616'), [sx * 0.1, 0.32, 0.05], [0.04, 0.25, 0.04])); } });
+  };
+  V.spotted_hyena = () =>
+    quad({ L: 1.4, H: 0.6, W: 0.45, frontLeg: 0.75, backLeg: 0.55, legR: 0.07, pitch: 0.15, color: '#b8a07a', map: M.tex.spots('#b8a07a', '#4a3a2a', false), legMap: M.tex.spots('#b8a07a', '#4a3a2a', false),
+      neckLen: 0.35, neckAngle: 0.9, neckR: 0.16, head: [0.17, 0.17, 0.24], headColor: '#a88f6a', snout: 0.15, snoutColor: '#2a2420', ears: { w: 0.07, h: 0.1, round: true }, tail: { len: 0.4, r: 0.04, tuft: '#222' }, gait: 1.1 });
+  V.greater_kudu = () =>
+    quad({ L: 1.9, H: 1.0, W: 0.7, leg: 1.0, legR: 0.08, color: '#8a7a68', map: M.tex.stripes('#8a7a68', '#f0eadc', 8), neckLen: 0.7, neckAngle: 0.7, neckR: 0.18, head: [0.18, 0.22, 0.5], snout: 0.2,
+      ears: { w: 0.14, h: 0.28 }, tail: { len: 0.5, r: 0.03, tuft: '#222' },
+      extra: (m) => {
+        for (const sx of [1, -1]) {
+          m.head.add(mesh(G.cone, M.mat('#3a2e22'), [sx * 0.16, 0.5, -0.12], [0.06, 0.8, 0.06], [-0.45, 0, sx * 0.35]));
+          m.head.add(mesh(G.cone, M.mat('#3a2e22'), [sx * 0.3, 0.95, -0.35], [0.045, 0.55, 0.045], [-0.2, 0, -sx * 0.3]));
+        }
+      } });
+  V.nile_crocodile = () => {
+    const m = lizard(3.6, '#6e6a44', M.tex.spots('#6e6a44', '#3e3a24', false))();
+    m.head.scale.set(1.1, 0.8, 1.9);
+    return m;
+  };
+  V.siamang = ape(0.9, '#141414', '#2a2a2a', 1.25);
+  V.malayan_tiger = cat(1.8, '#c86e22', M.tex.stripes('#c86e22', '#150e08', 20), null, null, M.tex.rings('#c86e22', '#150e08', 5));
+  V.humboldt_penguin = () =>
+    biped({ L: 0.3, H: 0.55, W: 0.3, leg: 0.06, legR: 0.03, legColor: '#222', color: '#26262a', belly: '#f4f4ef', pitch: -0.15, neckLen: 0.02, neckAngle: 0, head: [0.1, 0.1, 0.11], headColor: '#26262a', beak: '#e89a8a', beakLen: 0.09, gait: 2.2,
+      extra: (m, c) => {
+        for (const sx of [1, -1]) m.body.add(mesh(G.sphere, M.mat('#26262a'), [sx * 0.16, c.bodyY, 0], [0.03, 0.2, 0.08], [0, 0, sx * 0.2]));
+        m.swims = true;
+      } });
+  V.chilean_flamingo = () =>
+    biped({ L: 0.55, H: 0.35, W: 0.3, leg: 0.8, legR: 0.025, legColor: '#9aa0a8', color: '#f4bfc8', neckLen: 0.65, neckAngle: 0.15, neckR: 0.035, head: [0.07, 0.07, 0.09], beak: '#222', beakLen: 0.14, beakDown: 0.8, gait: 1.2,
+      extra: (m) => m.body.add(mesh(G.cone, M.mat('#1a1a1a'), [0, 0.95, -0.3], [0.08, 0.2, 0.08], [-1.8, 0, 0])) });
+  V.bonobo = ape(1.0, '#161413', '#3a2e2a', 0.8, (m, c) => m.head.add(mesh(G.sphere, M.mat('#161413'), [0, c.hs[1] * 0.6, -0.02], [c.hs[0] * 1.05, c.hs[1] * 0.5, c.hs[2]])));
+  V.amur_leopard = cat(1.6, '#e3c9a0', M.tex.spots('#e3c9a0', '#2a1d10', true));
+  V.hamadryas_baboon = () =>
+    quad({ L: 0.9, H: 0.45, W: 0.36, frontLeg: 0.5, backLeg: 0.42, legR: 0.05, color: '#76705f', legColor: '#5c5649', neckLen: 0.14, neckAngle: 1.0, neckR: 0.11, head: [0.12, 0.12, 0.16], headColor: '#8a8474', snout: 0.14, snoutColor: '#d98a7a',
+      tail: { len: 0.55, r: 0.035, angle: -1.3, taper: false, color: '#6f685c' }, gait: 1.2, pitch: 0.2,
+      extra: (m, c) => m.body.add(mesh(G.lowSphere, M.mat('#958f80'), [0, c.bodyY + 0.1, 0.25], [0.24, 0.2, 0.22])) });
+  V.sloth_bear = bear(1.6, '#141210', (m, c) => {
+    m.body.add(mesh(G.cone, M.mat('#e8e0cc'), [0, c.bodyY + 0.05, c.o.L * 0.43], [0.14, 0.2, 0.04], [Math.PI, 0, 0]));
+    m.body.add(mesh(G.lowSphere, M.mat('#141210'), [0, c.bodyY + 0.3, c.o.L * 0.25], [0.55, 0.35, 0.4]));
+  });
+  V.gray_seal = () => {
+    const m = quad({ L: 2.0, H: 0.65, W: 0.6, leg: 0.1, legR: 0.12, color: '#8a8a88', map: M.tex.spots('#8a8a88', '#5a5a5a', false), pitch: -0.1, splay: 0.6, splayOut: 0.9, neckLen: 0.3, neckAngle: 0.7, neckR: 0.2, head: [0.18, 0.17, 0.24], snout: 0.14, stride: 0.2, gait: 1.2 });
+    m.swims = true;
+    return m;
+  };
+  V.sumatran_orangutan = ape(1.2, '#c9682e', '#6a4a3a', 1.0);
+
+  const SWIMMERS = ['humboldt_penguin', 'gray_seal', 'nile_crocodile', 'malayan_tiger', 'hippo', 'sea_lion', 'river_otter', 'african_penguin', 'polar_bear', 'alligator', 'jaguar', 'water_monitor', 'pygmy_hippo', 'asian_elephant', 'flamingo', 'nene'];
   M.swims = (id) => SWIMMERS.includes(id);
   M.SIZE = { african_elephant: 1, asian_elephant: 0.92 };
 
@@ -666,7 +726,7 @@
     m.root.traverse((o) => {
       if (o.isMesh) o.castShadow = true;
     });
-    if (sex === 'M' && ['gorilla', 'orangutan', 'african_elephant', 'asian_elephant', 'giraffe', 'hippo'].includes(spId)) m.root.scale.setScalar(1.1);
+    if (sex === 'M' && ['gorilla', 'orangutan', 'sumatran_orangutan', 'african_elephant', 'asian_elephant', 'giraffe', 'masai_giraffe', 'hippo'].includes(spId)) m.root.scale.setScalar(1.1);
     if (baby) {
       m.root.scale.multiplyScalar(0.45);
       m.head.scale.multiplyScalar(1.25);

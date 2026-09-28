@@ -60,12 +60,14 @@
         theming: ex.theming != null ? ex.theming : U.ri(s, 40, 75),
       });
       h.opened = -U.ri(s, 500, 9000);
-      for (const [spId, m, f, ageR] of ex.sp) {
+      for (const [spId, m, f, ageR, names] of ex.sp) {
         const sp = ZG.SPECIES[spId];
         for (let k = 0; k < m + f; k++) {
           const yrs = ageR ? U.rf(s, ageR[0], ageR[1]) : U.rf(s, sp.mature, Math.max(sp.mature + 1, sp.life * 0.6));
-          const a = ZG.Animals.create(s, spId, k < m ? 'M' : 'F', yrs * 365, { hab: h.id, arrived: -U.ri(s, 100, 4000) });
-          if (ageR && k === m) a.star = true;
+          const extra = { hab: h.id, arrived: -U.ri(s, 100, 4000) };
+          if (names && names[k]) Object.assign(extra, { name: names[k], star: true, lifeMult: yrs / sp.life > 0.8 ? 1.3 : 1 });
+          const a = ZG.Animals.create(s, spId, k < m ? 'M' : 'F', yrs * 365, extra);
+          if (ageR && !names && k === m) a.star = true;
         }
       }
     });

@@ -150,7 +150,7 @@
     for (const a of s.animals) {
       const sp = ZG.SPECIES[a.sp];
       a.age++;
-      const lifeFrac = a.age / (sp.life * 365);
+      const lifeFrac = a.age / (sp.life * 365 * (a.lifeMult || 1));
 
       if (a.loc === 'quarantine') {
         a.qDays--;

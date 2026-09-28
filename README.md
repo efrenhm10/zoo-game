@@ -29,7 +29,17 @@ The game autosaves to your browser every in-game month.
 | 🐘 **Houston Zoo** | Nonprofit under a City management agreement | Hurricanes, floods, heat, grid-failing freezes, EEHV in the elephant herd, contract renewal |
 | 🦒 **Cheyenne Mountain Zoo** | Private nonprofit, no tax support | Extreme seasonality, blizzards, wildfire, steep-terrain construction; giraffe herd management |
 
-Figures are gameplay approximations inspired by the real institutions. Animal names are fictional.
+Figures are gameplay approximations inspired by the real institutions.
+
+**Starting collections follow each zoo's real animals (researched 2025–26):**
+
+- **Honolulu:** elephants Mari and Vaigai, eastern black rhinos, hippos, lions, cheetahs, spotted hyenas, Nile crocodiles, giraffes/zebras/kudu, orangutans, siamangs, a sun bear, Komodo dragon, Galápagos and Aldabra tortoises, and nēnē.
+- **San Diego:** giant pandas Yun Chuan and Xin Bao, koalas, gorillas, bonobos, orangutans with siamangs, hippos, African elephants, lions and jaguars in Elephant Odyssey, Sumatran tigers, polar bears, and at Africa Rocks African penguins, Amur leopards and hamadryas baboons.
+- **National Zoo:** giant pandas Bao Li and Qing Bao, Amur tigers Vostok and Coba, bison Lucy and Gally, Asian elephants, gorillas, orangutans, lions, cheetahs, red pandas, clouded leopards, sloth bears, Andean bears, sea lions with gray seals, flamingos, and Kids' Farm.
+- **Houston:** eight Asian elephants, gorillas, chimpanzees, Masai giraffes with Grant's zebras and ostriches, white rhinos, okapi, pygmy hippos, lions, Malayan tigers, jaguars, Galápagos tortoises, Humboldt penguins, sea lions, orangutans, and alligators.
+- **Cheyenne Mountain:** a giant reticulated giraffe herd with Grant's zebras, African elephants, eastern black rhinos, four hippos, African penguins, lions, okapi, grizzlies, moose, Mexican gray wolves, Amur tigers and leopards, snow leopards, gorillas, and Sumatran orangutans.
+
+Famous residents use their real names; other animals get generated names. Each zoo's list is a representative sample of its signature animals, not the full inventory.
 
 ## 🗺️ Real surroundings
 
