@@ -1,0 +1,47 @@
+// Name pools for animals, partner institutions, donors and (fictional) companies.
+(function (ZG) {
+  ZG.NAMES = {
+    animal: {
+      african: ['Kali', 'Zuri', 'Tembo', 'Jabari', 'Nia', 'Amani', 'Baraka', 'Imani', 'Kito', 'Malaika', 'Sefu', 'Tatu', 'Pendo', 'Juma', 'Asha', 'Bahati', 'Dume', 'Furaha', 'Hodari', 'Jamila', 'Kesi', 'Lulu', 'Moyo', 'Neema', 'Omari', 'Rafiki', 'Sanaa', 'Tumaini', 'Wanjiru', 'Zawadi', 'Makena', 'Kamau', 'Ayo', 'Dalila', 'Enzi', 'Kibo', 'Shani', 'Tau', 'Uzuri', 'Yaro'],
+      asian: ['Mali', 'Suki', 'Raja', 'Tika', 'Bakti', 'Indah', 'Kumar', 'Lani', 'Mei', 'Rudi', 'Sari', 'Tuan', 'Anjali', 'Bima', 'Chandra', 'Dewi', 'Jaya', 'Kiri', 'Mani', 'Nara', 'Putri', 'Ratu', 'Sumatra', 'Wira', 'Xin', 'Bao', 'Mei Xiang', 'Lin', 'Hua', 'Yun', 'Tian', 'Ping', 'Kai', 'Anak', 'Budi', 'Citra', 'Dian', 'Intan', 'Lestari', 'Surya'],
+      american: ['Juniper', 'Aspen', 'Sage', 'Cody', 'Willow', 'Boone', 'Dakota', 'Maverick', 'Luna', 'Sierra', 'Shasta', 'Tahoe', 'Cheyenne', 'Ranger', 'Hazel', 'Kodiak', 'Maple', 'Pinyon', 'Rio', 'Scout', 'Teton', 'Yuma', 'Ember', 'Birch', 'Cedar', 'Flint', 'Grady', 'Hank', 'Juno', 'Nova', 'Ozzie', 'Piper', 'Remy', 'Tex', 'Waylon', 'Zeke'],
+      hawaiian: ['Keiki', 'Kalani', 'Leilani', 'Makana', 'Nalu', 'Hoku', 'Iolana', 'Kai', 'Koa', 'Lokelani', 'Mahina', 'Noelani', 'Pua', 'Ulu', 'Kalea', 'Kekoa', 'Malia', 'Ikaika', 'Aolani', 'Ekolu'],
+      misc: ['Bubbles', 'Ziggy', 'Pickles', 'Biscuit', 'Moxie', 'Pepper', 'Waffles', 'Noodle', 'Sprout', 'Tofu', 'Clementine', 'Gus', 'Olive', 'Pip', 'Rosie', 'Mochi', 'Dumpling', 'Nugget', 'Poppy', 'Winston'],
+    },
+    partnerZoos: ['Denver Zoo', 'Saint Louis Zoo', 'Zoo Atlanta', 'Columbus Zoo', 'Oregon Zoo', 'Bronx Zoo', 'Cincinnati Zoo', 'Oklahoma City Zoo', 'Fort Worth Zoo', 'Dallas Zoo', 'Phoenix Zoo', "Utah's Hogle Zoo", 'Woodland Park Zoo', 'Oakland Zoo', 'Sacramento Zoo', 'Brookfield Zoo Chicago', 'Lincoln Park Zoo', 'Philadelphia Zoo', 'Zoo Miami', 'Nashville Zoo', 'Memphis Zoo', 'Kansas City Zoo', "Omaha's Henry Doorly Zoo", 'Toledo Zoo', 'Detroit Zoo', 'Minnesota Zoo', 'Louisville Zoo', 'Jacksonville Zoo', 'Riverbanks Zoo', 'Audubon Zoo', 'ABQ BioPark', 'Reid Park Zoo', 'Los Angeles Zoo', 'Fresno Chaffee Zoo', 'Tulsa Zoo', 'Zoo Knoxville', 'Sedgwick County Zoo', 'Milwaukee County Zoo', 'Pittsburgh Zoo', 'Maryland Zoo'],
+    donorFirst: ['Margaret', 'Robert', 'Ellen', 'David', 'Grace', 'Harold', 'Lucia', 'Samuel', 'Diane', 'Kenji', 'Priya', 'Walter', 'Rosa', 'Theodore', 'Naomi', 'Marcus', 'Evelyn', 'Victor', 'Lillian', 'Arthur', 'Mei', 'Carlos', 'Beatrice', 'Howard'],
+    donorLast: ['Chen', 'Whitfield', 'Nakamura', 'Alvarez', 'Pemberton', 'Okafor', 'Lindqvist', 'Castellano', 'Harrington', 'Kalama', 'Ostrowski', 'Delacroix', 'Abernathy', 'Tanaka', 'Montgomery', 'Vasquez', 'Holloway', 'Fairbanks', 'Kapoor', 'Sinclair', 'Brightwater', 'Mercer', 'Oyelaran', 'Stroud'],
+    foundations: ['Family Foundation', 'Charitable Trust', 'Fund for Wildlife', 'Foundation', 'Family Trust'],
+    companies: [
+      { name: 'Summit Health Partners', ind: 'Healthcare', risk: 0.05 },
+      { name: 'Coastline Credit Union', ind: 'Banking', risk: 0.05 },
+      { name: 'BrightPath Energy', ind: 'Utilities', risk: 0.2 },
+      { name: 'PetroMeridian Oil & Gas', ind: 'Oil & gas', risk: 0.7 },
+      { name: 'Sparkle Cola Co.', ind: 'Beverages', risk: 0.35 },
+      { name: 'EverGreen Palm Products', ind: 'Palm oil', risk: 0.85 },
+      { name: 'Horizon Airlines', ind: 'Airline', risk: 0.25 },
+      { name: 'TerraFirma Homes', ind: 'Home builder', risk: 0.2 },
+      { name: 'Fresh Harvest Grocers', ind: 'Grocery', risk: 0.05 },
+      { name: 'NovaTel Wireless', ind: 'Telecom', risk: 0.1 },
+      { name: 'Keystone Auto Group', ind: 'Car dealerships', risk: 0.15 },
+      { name: 'Ironclad Chemical', ind: 'Chemicals', risk: 0.6 },
+      { name: 'Riverside Children’s Hospital', ind: 'Healthcare', risk: 0.02 },
+      { name: 'QuickBite Burgers', ind: 'Fast food', risk: 0.3 },
+      { name: 'Pinnacle Insurance', ind: 'Insurance', risk: 0.05 },
+      { name: 'BlueWave Cruise Lines', ind: 'Cruise lines', risk: 0.45 },
+      { name: 'Solaria Renewables', ind: 'Solar energy', risk: 0.02 },
+      { name: 'Frontier Bank & Trust', ind: 'Banking', risk: 0.08 },
+      { name: 'GigaMart Superstores', ind: 'Retail', risk: 0.3 },
+      { name: 'Apex Defense Systems', ind: 'Defense contractor', risk: 0.5 },
+    ],
+    grants: [
+      { name: 'IMLS Museums for America grant', amt: [120000, 250000], odds: 0.35, needs: 'education' },
+      { name: 'NSF informal science education grant', amt: [200000, 600000], odds: 0.2, needs: 'education' },
+      { name: 'USFWS species recovery grant', amt: [60000, 180000], odds: 0.4, needs: 'conservation' },
+      { name: 'State wildlife agency partnership grant', amt: [40000, 120000], odds: 0.45, needs: 'conservation' },
+      { name: 'Private conservation foundation grant', amt: [100000, 400000], odds: 0.3, needs: 'conservation' },
+      { name: 'FEMA hazard-mitigation grant', amt: [300000, 1500000], odds: 0.25, needs: 'infrastructure' },
+    ],
+    storms: ['Ana', 'Bill', 'Claudette', 'Danny', 'Elsa', 'Fred', 'Grace', 'Henri', 'Ida', 'Julian', 'Kate', 'Larry', 'Mindy', 'Nicholas', 'Odette', 'Peter', 'Rose', 'Sam', 'Teresa', 'Victor', 'Wanda', 'Iselle', 'Kika', 'Lana', 'Olaf', 'Paka'],
+  };
+})((globalThis.ZG = globalThis.ZG || {}));
