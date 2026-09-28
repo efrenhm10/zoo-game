@@ -202,7 +202,7 @@
     modalOpen = true;
     const Z = ZG.zoo(s);
     el['modal-root'].innerHTML = `<div class="modal-back"><div class="modal event ${v.cat || ''}">
-      <div class="m-head"><span class="m-icon">${v.icon || '📌'}</span><div><small>${U.fmtDate(s.day)} · ${esc(Z.name)}</small><h2>${v.title}</h2></div></div>
+      <div class="m-head"><span class="m-icon">${v.icon || '📌'}</span><div><small>${U.fmtDate(s.day)} · ${esc(Z.name)}</small><h2>${v.title}</h2></div><button class="m-menu" data-top="menu" title="Save and return to the main menu">☰ Menu</button></div>
       <div class="m-body">${v.text}</div>
       <div class="m-choices">${v.choices
         .map((c, i) => `<button class="choice" data-choice="${i}" ${c.disabled ? `disabled title="${esc(c.why || '')}"` : ''}><b>${c.label}</b>${c.detail ? `<small>${c.detail}</small>` : ''}${c.cost ? `<span class="cost">${U.money(c.cost)}${c.capital ? ' (capital)' : ''}</span>` : ''}</button>`)
@@ -215,6 +215,11 @@
       el['modal-root'].innerHTML = `<div class="modal-back"><div class="modal result"><div class="m-head"><span class="m-icon">${r.icon || '📌'}</span><h2>${r.title}</h2></div><div class="m-body"><p><i>You chose: ${esc(r.choice)}</i></p><p>${esc(r.result)}</p></div><div class="m-choices"><button class="choice" data-close="1"><b>Continue</b></button></div></div></div>`;
     } else closeModal();
   }
+  function showResult(m) {
+    modalOpen = true;
+    el['modal-root'].innerHTML = `<div class="modal-back"><div class="modal result"><div class="m-head"><span class="m-icon">${m.icon || '📌'}</span><h2>${esc(m.title)}</h2></div><div class="m-body">${m.html}</div><div class="m-choices"><button class="choice" data-close="1"><b>Continue</b></button></div></div></div>`;
+  }
+  App.showResult = showResult;
   function closeModal() {
     el['modal-root'].innerHTML = '';
     modalOpen = false;
@@ -365,6 +370,7 @@
         if (a === 'menu') {
           App.save(true);
           if (App.confirm('menu', 'Return to the main menu? Your game is saved.')) {
+            closeModal();
             s = null;
             ZG.Render.reset();
             closeWindow();
@@ -399,7 +405,8 @@
         const fn = ZG.Actions[act.dataset.act];
         if (!fn) return;
         const r = fn(s, act.dataset, act);
-        if (r && r.msg) toast(r.msg, !r.ok);
+        if (r && r.modal) showResult(r.modal);
+        else if (r && r.msg) toast(r.msg, !r.ok);
         if (act.dataset.act === 'select' && act.dataset.plot != null) ZG.Render.focusPlot(s, +act.dataset.plot);
         App.refresh();
       }
@@ -436,6 +443,11 @@
         renderPanel(true);
       }
       if (t.dataset && (t.dataset.acq || t.dataset.rechab)) t.blur();
+      if (t.dataset && t.dataset.mtopic) {
+        ZG.Panels.ui.mediaTopic = t.value;
+        t.blur();
+        renderPanel(true);
+      }
     });
 
     const R = ZG.Render.state;

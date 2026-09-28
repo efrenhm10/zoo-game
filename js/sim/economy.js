@@ -3,7 +3,7 @@
   const U = ZG.U;
   const E = (ZG.Econ = {});
 
-  E.REV = { admissions: 'Admissions', memberships: 'Memberships', concessions: 'Food & retail', parking: 'Parking', feeding: 'Animal encounters', government: 'Government funding', donations: 'Donations', grants: 'Grants', sponsorships: 'Sponsorships', events: 'Special events', other: 'Other' };
+  E.REV = { admissions: 'Admissions', memberships: 'Memberships', concessions: 'Food & drink', retail: 'Gift shop & merch', parking: 'Parking', feeding: 'Animal encounters', government: 'Government funding', donations: 'Donations', grants: 'Grants', sponsorships: 'Sponsorships', events: 'Special events', other: 'Other' };
   E.EXP = { salaries: 'Salaries & benefits', animalcare: 'Animal food & care', vetcare: 'Veterinary treatment', utilities: 'Utilities', maintenance: 'Routine maintenance', enrichment: 'Enrichment & supplies', marketing: 'Marketing', conservation: 'Field conservation', cogs: 'Cost of goods sold', overhead: 'Insurance & overhead', admin: 'Admin & recruiting', interest: 'Interest', emergency: 'Emergency repairs', transport: 'Animal transport', events: 'Event costs', capitalRepairs: 'Capital repairs', construction: 'Construction' };
   E.CAPEX = ['capitalRepairs', 'construction'];
 
@@ -125,12 +125,14 @@
     const crowd = guests > cap ? Math.min(40, ((guests - cap) / cap) * 60) : 0;
     const wadj = { rain: -8, storm: -18, heat: -12, snow: -6, smoke: -15 }[s.today.weather] || 0;
     const welfare = ZG.Animals.avgWelfare(s);
-    return U.clamp(0.25 * exhibits + 0.15 * amenities + 0.15 * service + 0.15 * value + 0.15 * welfare + 0.15 * (100 - crowd) + wadj + ZG.mod(s, 'guest'), 0, 100);
+    const shop = s.merch ? ZG.Merch.PRICES[s.merch.price].sat : 0;
+    return U.clamp(0.25 * exhibits + 0.15 * amenities + 0.15 * service + 0.15 * value + 0.15 * welfare + 0.15 * (100 - crowd) + wadj + shop + ZG.mod(s, 'guest'), 0, 100);
   };
 
   E.daily = function (s, t) {
     const Z = ZG.zoo(s);
-    const guests = E.dailyAttendance(s, t);
+    let guests = E.dailyAttendance(s, t);
+    if (s.flags.freeDay === s.day) guests = Math.round(guests * 2.2);
     const memberShare = U.clamp((s.members * Z.memberVisits) / Math.max(1, s.att.lastYear), 0, 0.6);
     const paying = Math.round(guests * (1 - memberShare));
     s.today.guests = guests;
@@ -145,11 +147,14 @@
     s.satisfaction += (satT - s.satisfaction) * 0.04;
 
     // Revenue
-    if (!Z.priceLocked) E.earn(s, 'admissions', paying * s.policy.admission * Z.yieldAdm);
+    const freeDay = s.flags.freeDay === s.day;
+    if (!Z.priceLocked && !freeDay) E.earn(s, 'admissions', paying * s.policy.admission * Z.yieldAdm);
     const spendF = (0.75 + 0.35 * (s.satisfaction / 70)) * (0.8 + 0.2 * s.economy) * (0.7 + 0.3 * Math.min(1.1, ZG.Staff.ratio(s, 'guest')));
-    const gross = guests * Z.perCap * spendF * (s.flags.pouringBoost || 1);
-    E.earn(s, 'concessions', gross);
-    E.spend(s, 'cogs', gross * Z.cogs);
+    const base = guests * Z.perCap * spendF;
+    const foodRev = base * (1 - ZG.Merch.RETAIL_SHARE) * (s.flags.pouringBoost || 1);
+    E.earn(s, 'concessions', foodRev);
+    E.spend(s, 'cogs', foodRev * Z.cogs);
+    ZG.Merch.daily(s, base * ZG.Merch.RETAIL_SHARE, Z.cogs);
     if (Z.parkingPerCap) {
       const pf = s.policy.parkingFee / Math.max(1, Z.refs.parkingFee || 30);
       E.earn(s, 'parking', guests * Z.parkingPerCap * pf * Math.pow(pf, -0.25));
@@ -210,7 +215,8 @@
 
     const dev = 0.6 + 0.4 * Math.min(1.5, ZG.Staff.ratio(s, 'development'));
     const decMult = t.m === 11 ? 2.5 : (12 - 2.5) / 11;
-    const gifts = (Z.donorBase / 12) * dev * U.clamp(s.rep / s.rep0, 0.5, 1.4) * Math.pow(s.economy, 1.5) * ZG.mod(s, 'fundraising') * decMult * U.rf(s, 0.85, 1.15);
+    // 30% of giving comes through the top-donor roster and 15% through the partner organization.
+    const gifts = (Z.donorBase * 0.55 / 12) * dev * U.clamp(s.rep / s.rep0, 0.5, 1.4) * Math.pow(s.economy, 1.5) * ZG.mod(s, 'fundraising') * decMult * U.rf(s, 0.85, 1.15);
     E.earn(s, 'donations', gifts);
   };
 

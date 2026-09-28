@@ -98,6 +98,7 @@
     if (ZG.zoo(s).governance === 'city' || ZG.zoo(s).governance === 'federal') {
       s.gov.relationship = U.clamp(s.gov.relationship - Math.min(10, n), 0, 100);
     }
+    s.flags.laidOff = s.day + 180;
     s.rep = U.clamp(s.rep - Math.min(4, n * 0.3), 0, 100);
     ZG.Sim.news(s, `✂️ ${n} ${St.DEPTS.find((d) => d.id === dept).name} position${n > 1 ? 's' : ''} eliminated (severance ${U.money(sev)}). Staff morale drops.`, 'bad');
     return { ok: true, msg: `Laid off ${n}. Severance ${U.money(sev)}.` };

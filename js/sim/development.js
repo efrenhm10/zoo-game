@@ -42,6 +42,7 @@
       const toCapital = !!s.dev.campaign || p.passion.kind === 'capital';
       ZG.Econ.earn(s, 'donations', amt, toCapital);
       if (s.dev.campaign) s.dev.campaign.raised += amt;
+      if (ZG.Donors && s.donors) ZG.Donors.addFromProspect(s, p, amt);
       s.board = U.clamp(s.board + Math.min(6, amt / ZG.zoo(s).majorGiftScale * 2), 0, 100);
       ZG.Sim.news(s, `🎁 ${p.name} committed ${U.money(amt)}${toCapital ? ' to the capital fund' : ''}!`, 'good');
       return { ok: true, msg: `Yes! ${p.name} gave ${U.money(amt)}.`, won: true };
@@ -81,7 +82,7 @@
     s.dev.lastGrant = s.day;
     ZG.Econ.spend(s, 'admin', 6000);
     let odds = g.odds;
-    if (g.needs === 'education') odds *= U.clamp(ZG.Staff.ratio(s, 'education'), 0.4, 1.3);
+    if (g.needs === 'education') odds *= U.clamp(ZG.Staff.ratio(s, 'education'), 0.4, 1.3) * (s.flags.eduBoost > s.day ? 1.25 : 1);
     if (g.needs === 'conservation') odds *= U.clamp(s.aza / 70, 0.4, 1.3);
     if (g.needs === 'infrastructure') odds *= ZG.Infra.avgCond(s) < 50 ? 1.3 : 0.7;
     odds *= ZG.mod(s, 'fundraising');
@@ -119,6 +120,7 @@
     s.stats.sponsorsSigned++;
     if (o.kind === 'exhibit' && s.habitatsById[o.hab]) s.habitatsById[o.hab].sponsor = o.name;
     if (o.kind === 'pouring') s.flags.pouringBoost = 1.04;
+    if (o.risk > 0.4 && s.donors) ZG.Donors.react(s, -Math.round(o.risk * 8), (d) => d.trait === 'impact' || d.trait === 'private' || d.interest.kind === 'conservation');
     if (o.risk > 0.55) {
       s.aza = U.clamp(s.aza - o.risk * 4, 0, 100);
       s.rep = U.clamp(s.rep - o.risk * 2, 0, 100);
@@ -159,9 +161,10 @@
     // Campaign progress: ambient campaign giving
     const c = s.dev.campaign;
     if (c) {
-      const trickle = c.goal * 0.012 * devR * U.clamp(s.rep / 70, 0.5, 1.3) * s.economy * ZG.mod(s, 'fundraising');
+      const trickle = c.goal * 0.012 * (1 + (c.momentum || 0)) * devR * U.clamp(s.rep / 70, 0.5, 1.3) * s.economy * ZG.mod(s, 'fundraising');
       ZG.Econ.earn(s, 'donations', trickle, true);
       c.raised += trickle;
+      c.momentum = Math.max(0, (c.momentum || 0) * 0.85);
       if (c.raised >= c.goal) {
         s.stats.campaignsDone++;
         s.board = U.clamp(s.board + 10, 0, 100);

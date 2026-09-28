@@ -51,6 +51,18 @@
         c.why = 'Not enough funds (incl. credit line)';
       }
     }
+    // Never leave the player stuck: if nothing is affordable, the cheapest option can
+    // still be taken on emergency credit, at a cost to your boss's confidence.
+    if (v.choices.every((c) => c.disabled)) {
+      const cheapest = v.choices.slice().sort((a, b) => (a.cost || 0) - (b.cost || 0))[0];
+      const apply = cheapest.apply;
+      v.choices.push(Object.assign({}, cheapest, {
+        label: `${cheapest.label} — on emergency credit`,
+        detail: 'You are past your credit limit. The bank charges interest and your boss will hear about it.',
+        disabled: false, why: '',
+        apply: (s, ctx) => { board(s, -4); return ((apply && apply(s, ctx)) || '') + ' Finance had to go past the credit limit to pay for it.'; },
+      }));
+    }
     return v;
   };
   EV.choose = function (s, idx) {
@@ -112,6 +124,11 @@
   // =====================================================================
   // TRIGGERED EVENTS
   // =====================================================================
+  def('zoo_event_result', {
+    cat: 'guest',
+    make: (s, c) => ({ icon: c.icon, title: c.title, text: c.html, choices: [{ label: 'Nice', apply: () => '' }] }),
+  });
+
   def('intro', {
     cat: 'story',
     make: (s) => {
@@ -120,7 +137,7 @@
       const from = z.governance === 'city' ? 'Office of the Mayor' : z.governance === 'federal' ? 'Office of the Secretary, Smithsonian Institution' : 'Chair, Board of Trustees';
       return {
         icon: '✉️', title: `Welcome, Director ${d.name.split(' ').slice(-1)[0]}`,
-        text: `<p><em>From the ${from}:</em></p><p>Congratulations on your appointment as Director of the <b>${z.name}</b>. ${z.blurb}</p><p>Your performance will be judged on these goals by the end of ${ZG.OBJ_DEADLINE}:</p><ul>${z.objectives.map((o) => `<li>${o.text}</li>`).join('')}</ul><p>Walk the grounds, get to know the animals, and remember: every decision echoes through the budget.</p>`,
+        text: `<p><em>From the ${from}:</em></p><p>Dear ${ZG.pronoun(s).title} ${d.name.split(' ').slice(-1)[0]},</p><p>Congratulations on your appointment as Director of the <b>${z.name}</b>. ${z.blurb}</p><p>Your performance will be judged on these goals by the end of ${ZG.OBJ_DEADLINE}:</p><ul>${z.objectives.map((o) => `<li>${o.text}</li>`).join('')}</ul><p>Walk the grounds, get to know the animals, and remember: every decision echoes through the budget.</p>`,
         choices: [{ label: 'Get to work', apply: () => 'Your first day begins.' }],
       };
     },
@@ -370,9 +387,10 @@
 
   def('election', {
     cat: 'politics',
-    make: (s) => {
+    make: (s, c) => {
       const fed = s.gov.type === 'federal';
       const stance = U.pick(s, ['supportive', 'neutral', 'austerity']);
+      if (!c || !c.done) { ZG.Officials.election(s, fed ? 'federal' : 'local'); if (c) c.done = true; }
       const who = fed ? 'The new Congress' : 'The new Mayor';
       const txt = { supportive: `${who} grew up visiting the zoo and wants to be seen supporting it.`, neutral: `${who} has no strong views on the zoo.`, austerity: `${who} campaigned on cutting spending and "non-essential" services.` }[stance];
       return { icon: '🗳️', title: fed ? 'Election shakes up Congress' : 'A new Mayor takes office', text: `<p>${txt}</p>`,
@@ -398,14 +416,15 @@
     cat: 'politics',
     make: (s) => {
       const g = s.gov;
-      const p = Math.round(ZG.Politics.odds(s, 0.05) * 100);
+      const p = Math.round(ZG.Politics.odds(s, 0.05, 'contract') * 100);
       return { icon: '📜', title: 'City management agreement up for renewal',
         text: `<p>The City of Houston's agreement to fund zoo operations expires soon. The City is proposing to keep the fee flat for 10 years (no escalator). Current fee: <b>${$(g.appropriation)}/yr</b>.</p>`,
         choices: [
-          { label: 'Accept the City\'s terms', apply: (s) => { s.stats.contractRenewed = true; pol(s, 5); g.contractYear += 10; ZG.Sim.flag(s, 'noEscalator', true); return 'Signed. Stable, if unexciting.'; } },
+          { label: 'Accept the City\'s terms', apply: (s) => { ZG.Officials.clear(s, 'contract'); s.stats.contractRenewed = true; pol(s, 5); g.contractYear += 10; ZG.Sim.flag(s, 'noEscalator', true); return 'Signed. Stable, if unexciting.'; } },
           { label: 'Negotiate: escalators + capital commitment', detail: `~${p}% chance of success`, apply: (s) => {
             s.stats.contractRenewed = true;
             g.contractYear += 10;
+            ZG.Officials.clear(s, 'contract');
             if (U.rand(s) < p / 100) { g.appropriation = Math.round(g.appropriation * 1.08); ZG.Econ.earn(s, 'government', 3e6 * scale(s) / 2, true); s.stats.budgetWins++; return 'Big win: +8% fee and a capital commitment!'; }
             g.appropriation = Math.round(g.appropriation * 0.96); pol(s, -5); return 'Talks got tense. You signed, but at a 4% lower fee.';
           } },

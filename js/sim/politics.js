@@ -21,8 +21,9 @@
     };
   };
 
-  P.odds = function (s, bump) {
+  P.odds = function (s, bump, key) {
     const g = s.gov;
+    if (key && s.officials) bump += ZG.Officials.support(s, g.type === 'federal' ? 'federal' : 'local', key) * 0.3;
     return U.clamp(0.35 + (g.relationship - 50) / 110 + (s.rep - 60) / 220 + (s.economy - 1) * 1.6 + ZG.mod(s, 'politics') / 100 + (g.mayor === 'supportive' ? 0.08 : g.mayor === 'austerity' ? -0.1 : 0) + bump, 0.04, 0.95);
   };
 
@@ -78,7 +79,7 @@
       campaign: { ask: base * 1.15, capital: Math.round(backlog * 0.25), bump: 0.1 },
     };
     const o = opts[kind];
-    g.request = { kind, ask: Math.round(o.ask), capital: o.capital, p: P.odds(s, o.bump), base };
+    g.request = { kind, ask: Math.round(o.ask), capital: o.capital, p: P.odds(s, o.bump), base, bump: o.bump };
     return g.request;
   };
 
@@ -86,6 +87,8 @@
     const g = s.gov;
     const r = g.request;
     g.request = null;
+    if (r.bump != null) r.p = P.odds(s, r.bump, 'budget'); // lining up supporters since filing counts
+    ZG.Officials.clear(s, 'budget');
     const roll = U.rand(s);
     let outcome;
     if (roll < r.p) outcome = 'full';
@@ -168,14 +171,17 @@
     const f = g.feeProposal;
     g.feeProposal = null;
     const change = (f.price - f.from) / Math.max(1, f.from);
-    const p = U.clamp(P.odds(s, 0.25) - Math.max(0, change) * 1.5, 0.05, 0.95);
-    if (U.rand(s) < p) {
+    // The Council votes member by member; price hikes cost votes.
+    const v = ZG.Officials.vote(s, 'local', 'fee', 0.12 - Math.max(0, change) * 1.2);
+    ZG.Officials.clear(s, 'fee');
+    const tally = ` (vote ${v.yes}–${v.no})`;
+    if (v.passed) {
       s.policy.admission = f.price;
       if (change > 0) g.relationship = U.clamp(g.relationship - 2, 0, 100);
-      ZG.Sim.news(s, `🏛️ City Council approved the zoo fee ordinance: admission is now $${f.price}.`, 'good');
+      ZG.Sim.news(s, `🏛️ City Council approved the zoo fee ordinance${tally}: admission is now $${f.price}.`, 'good');
     } else {
       g.relationship = U.clamp(g.relationship - 1, 0, 100);
-      ZG.Sim.news(s, `🏛️ City Council voted down the fee ordinance ($${f.price}). Admission stays at $${f.from}.`, 'bad');
+      ZG.Sim.news(s, `🏛️ City Council voted down the fee ordinance ($${f.price})${tally}. Admission stays at $${f.from}.`, 'bad');
     }
   };
 })((globalThis.ZG = globalThis.ZG || {}));

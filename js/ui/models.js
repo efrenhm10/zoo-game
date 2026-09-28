@@ -774,7 +774,11 @@
       root.add(a);
       arms.push(a);
     }
-    root.add(mesh(G.box, outfit, [0, 1.22, 0], [0.5, 0.62, 0.28]));
+    const build = look.build || 'average';
+    if (build === 'narrow') {
+      root.add(mesh(G.box, outfit, [0, 1.26, 0], [0.44, 0.54, 0.26]));
+      root.add(mesh(G.box, outfit, [0, 0.98, 0], [0.5, 0.2, 0.29]));
+    } else root.add(mesh(G.box, outfit, [0, 1.22, 0], [build === 'broad' ? 0.56 : 0.5, 0.62, build === 'broad' ? 0.3 : 0.28]));
     root.add(mesh(G.box, M.mat('#f5f0dc'), [0.12, 1.3, 0.15], [0.08, 0.1, 0.02]));
     root.add(mesh(G.sphere, skin, [0, 1.78, 0], [0.19, 0.22, 0.2]));
     for (const sx of [1, -1]) root.add(mesh(G.sphere, M.mat('#1a1a1a'), [sx * 0.07, 1.8, 0.18], [0.025, 0.03, 0.02]));

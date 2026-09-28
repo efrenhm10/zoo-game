@@ -79,6 +79,7 @@
 
     ZG.Staff.init(s);
     ZG.Dev.init(s);
+    Sim.initSystems(s);
     s.appeal0 = ZG.Habitats.totalAppeal(s);
     // Membership join rate calibrated so membership is roughly stable at the start
     const paying = (Z.baseAttendance - Math.min(0.6 * Z.baseAttendance, s.members * Z.memberVisits)) / 12;
@@ -99,6 +100,16 @@
     return s;
   };
 
+  // Systems added after the first release; also used to upgrade older saves.
+  Sim.initSystems = function (s) {
+    if (!s.donors) ZG.Donors.init(s);
+    if (!s.officials) ZG.Officials.init(s);
+    if (!s.partner) ZG.Partner.init(s);
+    if (!s.media) ZG.Media.init(s);
+    if (!s.zooEvents) ZG.ZooEvents.init(s);
+    if (!s.merch) ZG.Merch.init(s);
+  };
+
   Sim.reindex = function (s) {
     s.habitatsById = {};
     for (const h of s.habitats) s.habitatsById[h.id] = h;
@@ -109,6 +120,7 @@
     const t = U.dateOf(s.day);
     if (t.d === 1) Sim.monthStart(s, t);
     ZG.Econ.weather(s, t);
+    ZG.ZooEvents.daily(s);
     if (s.closure) {
       s.closure.days--;
       if (s.closure.days <= 0) {
@@ -158,6 +170,10 @@
     ZG.Econ.monthStart(s, t);
     ZG.Politics.monthly(s, t);
     ZG.Dev.monthly(s, t);
+    ZG.Donors.monthly(s, t);
+    ZG.Officials.monthly(s, t);
+    ZG.Partner.monthly(s, t);
+    ZG.Merch.monthly(s, t);
     ZG.AZA.monthly(s, t);
     ZG.AZA.refreshMarket(s);
     if (t.m === 1 && s.day > 60) ZG.AZA.generatePlan(s);
@@ -283,6 +299,7 @@
     const s = JSON.parse(str);
     for (const h of s.habitats) h.features = h.features || [];
     Sim.reindex(s);
+    Sim.initSystems(s);
     s._fx = [];
     return s;
   };

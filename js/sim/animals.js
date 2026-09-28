@@ -136,6 +136,7 @@
       } else if (a.loc === 'quarantine') target = 62;
       target = 0.9 * target + 0.1 * a.health + ZG.mod(s, 'welfare');
       if (a.sick) target -= 6 * a.sick.sev;
+      if (s.flags.stress && s.flags.stress.until > s.day && a.loc === 'hab') target -= s.flags.stress.amt;
       a.welfare += (target - a.welfare) * 0.06;
     }
     s._hf = hf;

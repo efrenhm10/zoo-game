@@ -231,6 +231,23 @@
     return { ok: true, msg: `Acquired ${o.count} ${sp.name}${o.count > 1 ? 's' : ''}.` };
   };
 
+  // Ask the SSP / partner zoos for one specific animal (a companion or mate) for a habitat.
+  Z_.requestCost = (s, spId) => Math.round(Z_.transportCost(s, spId) + 5000);
+  Z_.requestAnimal = function (s, spId, hid, sex) {
+    const sp = ZG.SPECIES[spId];
+    if (!sp || sp.program === 'Loan') return { ok: false, msg: 'Panda loans are negotiated government-to-government.' };
+    if (sp.program === 'SSP' && !Z_.accredited(s)) return { ok: false, msg: "Without AZA accreditation the SSP won't place animals with you." };
+    const o = {
+      id: s.nextId++, sp: spId, count: 1, sex: sex || (U.chance(s, 0.5) ? 'M' : 'F'), age: Math.round(U.rf(s, sp.mature, sp.mature + 6) * 365),
+      gv: U.pick(s, ['High', 'Medium', 'Medium']), from: U.pick(s, ZG.NAMES.partnerZoos), kind: sp.program === 'SSP' ? 'ssp' : 'institution',
+      cost: Z_.requestCost(s, spId), expires: s.day + 60,
+    };
+    s.market.push(o);
+    const r = Z_.acquire(s, o.id, hid);
+    if (!r.ok) s.market = s.market.filter((x) => x.id !== o.id);
+    return r;
+  };
+
   Z_.move = function (s, aid, hid) {
     const a = ZG.Animals.byId(s, aid);
     const h = s.habitatsById[hid];

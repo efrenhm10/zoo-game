@@ -68,7 +68,7 @@
       ${meter('AZA standing', s.aza)}
       ${meter(Z.governance === 'city' ? 'City Hall confidence' : Z.governance === 'federal' ? 'Smithsonian confidence' : 'Board confidence', s.board, 'If this reaches zero you will be replaced')}
       ${meter('Staff morale', s.morale)}
-      ${alerts.length ? `<h3>⚠️ Needs attention</h3><ul class="alerts">${alerts.map((a) => `<li data-act="tab" data-tab="${a.tab}">${a.text}</li>`).join('')}</ul>` : ''}
+      ${alerts.length ? `<h3>⚠️ Needs attention</h3><ul class="alerts">${alerts.map((a) => (a.plot != null ? `<li data-act="select" data-plot="${a.plot}">${esc(a.text)} →</li>` : `<li data-act="tab" data-tab="${a.tab}">${a.text}</li>`)).join('')}</ul>` : ''}
       <h3>🎯 Goals (by end of ${ZG.OBJ_DEADLINE})</h3><ul class="objs">${objs}</ul>
       <h3>Accreditation</h3>
       <p>Status: <b class="${s.acc.status === 'accredited' ? 'good' : 'bad'}">${s.acc.status.toUpperCase()}</b> · next inspection ${U.fmtMonth(s.acc.next)} (${Math.max(0, Math.round((s.acc.next - s.day) / 30))} months)</p>
@@ -87,8 +87,11 @@
     if (s.cash < 0) a.push({ tab: 'finance', text: `Operating cash is negative — you're paying interest on the credit line` });
     const crit = Object.entries(s.infra).filter(([, v]) => v.cond < 35 && !v.repair);
     if (crit.length) a.push({ tab: 'facilities', text: `${crit.length} infrastructure system${crit.length > 1 ? 's' : ''} in critical condition` });
-    const worn = s.habitats.filter((h) => !h.construction && !h.renovation && h.condition < 40);
-    if (worn.length) a.push({ tab: 'habitats', text: `${worn.length} habitat${worn.length > 1 ? 's' : ''} badly worn` });
+    for (const h of s.habitats) {
+      if (h.construction || h.renovation) continue;
+      const dg = ZG.Diagnose.habitat(s, h);
+      if (dg.level === 'bad') a.push({ tab: 'habitats', plot: h.plot, text: `${h.name}: ${dg.summary}` });
+    }
     const empty = s.habitats.filter((h) => !h.construction && !s.animals.some((x) => x.hab === h.id));
     if (empty.length) a.push({ tab: 'animals', text: `${empty.map((h) => h.name).join(', ')} has no animals — visit the Animal Exchange` });
     if (s.acc.next - s.day < 120) a.push({ tab: 'conservation', text: `AZA inspection in ${Math.round((s.acc.next - s.day) / 30)} months` });
@@ -111,7 +114,9 @@
         const h = p.hab ? s.habitatsById[p.hab] : null;
         if (!h) return `<tr data-act="select" data-plot="${p.id}" class="click"><td>🪧 <i>Available lot</i></td><td>${U.num(p.area)} m²</td><td colspan="2">${btn('Plan a habitat', 'select', { plot: p.id }, 'sm')}</td></tr>`;
         const n = s.animals.filter((a) => a.hab === h.id).length;
-        return `<tr data-act="select" data-plot="${p.id}" class="click"><td>${esc(h.name)}${h.construction ? ' 🏗️' : h.renovation ? ' 🛠️' : ''}</td><td>${n} animals</td><td style="width:90px">${h.construction ? `${Math.round((1 - h.construction.days / h.construction.total) * 100)}% built` : bar(h.condition)}</td><td>${Math.round(ZG.Habitats.appeal(s, h))}★</td></tr>`;
+        const dg = h.construction ? null : ZG.Diagnose.habitat(s, h);
+        const chip = dg && dg.summary ? `<br><span class="dchip ${dg.level}">${dg.level === 'bad' ? '⛔' : '⚠️'} ${esc(dg.summary)}</span>` : '';
+        return `<tr data-act="select" data-plot="${p.id}" class="click ${dg ? 'lvl-' + dg.level : ''}"><td>${esc(h.name)}${h.construction ? ' 🏗️' : h.renovation ? ' 🛠️' : ''}${chip}</td><td>${n} animals</td><td style="width:90px">${h.construction ? `${Math.round((1 - h.construction.days / h.construction.total) * 100)}% built` : bar(h.condition)}</td><td>${Math.round(ZG.Habitats.appeal(s, h))}★</td></tr>`;
       })
       .join('');
     return `<h2>🏞️ Habitats & Construction</h2>${top}<h3>All plots</h3><table class="list">${rows}</table>`;
@@ -140,6 +145,7 @@
       html += `<p>🏗️ Under construction — ${Math.round((1 - h.construction.days / h.construction.total) * 100)}% complete, opens in ~${Math.ceil(h.construction.days / 30)} months.</p></div>`;
       return html;
     }
+    html += P.diagnosis(s, h);
     html += `<div class="grid2"><div>Condition ${bar(h.condition)}</div><div>Theming ${bar(h.theming)}</div></div>`;
     if (h.features && h.features.length) html += `<div class="feats">${h.features.map((f) => `<span class="feat" title="${esc(ZG.Design.FEATURES[f].line)}">${ZG.Design.FEATURES[f].icon} ${esc(ZG.Design.FEATURES[f].name)}</span>`).join('')}</div>`;
     if (h.brief) html += `<p class="sub">Design brief: “${esc(h.brief)}”</p>`;
@@ -168,6 +174,16 @@
     </div>
     <p class="sub">Capital work draws on the capital fund first, then operating cash.</p></div>`;
     return html;
+  };
+
+  // "What's wrong and how to fix it" for a habitat.
+  P.diagnosis = function (s, h) {
+    const dg = ZG.Diagnose.habitat(s, h);
+    if (!dg.issues.length) return `<div class="diag ok"><b>✅ No problems.</b> <span class="sub">The animals here are doing well.</span></div>`;
+    const rows = dg.issues
+      .map((i) => `<div class="issue ${i.sev}"><div class="itext"><b>${i.icon} ${esc(i.short)}</b> ${esc(i.text)}</div>${i.fixes.length ? `<div class="actions">${i.fixes.map((f) => btn(f.label, f.act, f.data, 'sm ' + (i.sev === 'bad' ? 'primary' : ''))).join('')}</div>` : ''}</div>`)
+      .join('');
+    return `<div class="diag ${dg.level}"><b>${dg.level === 'bad' ? '⛔ Needs fixing' : dg.level === 'warn' ? '⚠️ Could be better' : 'ℹ️ Status'}</b>${rows}</div>`;
   };
 
   P.buildForm = function (s, p) {

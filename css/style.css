@@ -315,3 +315,51 @@ ul.news small { color: var(--muted); margin-right: 5px; }
 details.card summary { cursor: pointer; }
 @keyframes pulse { 50% { opacity: 0.4; } }
 @media (max-width: 1000px) { .concepts { grid-template-columns: 1fr; } }
+
+/* ---------------- Sub-tabs ---------------- */
+.subtabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+.stab { background: var(--cream2); border: 1.5px solid var(--line); border-radius: 16px; padding: 4px 12px; font-weight: 800; font-size: 0.8rem; color: var(--olive-dark); }
+.stab.on { background: var(--olive); border-color: var(--olive2); color: #fff; }
+.stab:hover:not(.on) { border-color: var(--pink); }
+
+/* ---------------- Habitat diagnosis ---------------- */
+.diag { border-radius: 10px; padding: 9px 11px; margin: 8px 0 10px; border: 1.5px solid var(--line); background: var(--paper); display: flex; flex-direction: column; gap: 8px; }
+.diag.bad { border-color: var(--bad); background: #fdf0ee; }
+.diag.warn { border-color: var(--warn); background: #fdf6e6; }
+.diag.ok { border-color: var(--good); background: #eef7ea; display: block; }
+.diag > b { font-size: 0.92rem; }
+.issue { border-left: 4px solid var(--warn); padding: 2px 0 2px 9px; display: flex; flex-direction: column; gap: 5px; }
+.issue.bad { border-left-color: var(--bad); }
+.issue.info { border-left-color: var(--olive); }
+.issue .itext { font-size: 0.85rem; line-height: 1.35; }
+.issue .actions { margin: 0; }
+.dchip { display: inline-block; margin-top: 3px; font-size: 0.72rem; font-weight: 800; padding: 1px 7px; border-radius: 10px; background: #fdf6e6; color: var(--warn); }
+.dchip.bad { background: #fdecea; color: var(--bad); }
+tr.lvl-bad td:first-child { box-shadow: inset 4px 0 0 var(--bad); }
+tr.lvl-warn td:first-child { box-shadow: inset 4px 0 0 var(--warn); }
+
+/* ---------------- People cards (donors, officials, partner) ---------------- */
+.pface { flex: none; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; color: #fff; background: hsl(var(--h) 45% 45%); border: 3px solid #fff; box-shadow: 0 0 0 2px hsl(var(--h) 40% 70%); font-size: 0.9rem; }
+.donor-top { display: flex; align-items: center; gap: 10px; }
+.dmeta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.dmeta small { color: var(--muted); }
+.rel { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; margin: 8px 0 4px; font-size: 0.8rem; }
+.rel .bar { margin: 0; }
+.dnotes { font-size: 0.82rem; margin: 4px 0; }
+.card.donor.cool { border-color: var(--pink2); }
+.card.person.exec { border-width: 2px; border-color: var(--olive); }
+.lean { font-size: 0.72rem; font-weight: 900; padding: 2px 8px; border-radius: 10px; background: var(--cream2); }
+.actions.ask { border-top: 1px dashed var(--line); padding-top: 7px; align-items: center; }
+.actions.ask select { max-width: 210px; font-size: 0.8rem; padding: 3px 6px; }
+.whip { background: var(--cream2); border-radius: 10px; padding: 8px 11px; margin-bottom: 10px; font-size: 0.86rem; }
+.ask-card .row span { font-weight: 900; }
+
+/* ---------------- Events & merch ---------------- */
+.card.zev select { font-size: 0.8rem; padding: 3px 6px; }
+.lines { display: flex; flex-direction: column; gap: 6px; }
+.lines .line { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--paper); border: 1.5px solid var(--line); border-radius: 10px; padding: 7px 10px; }
+.lines .line.on { border-color: var(--olive); background: #f1f6e4; }
+.lines .line small { color: var(--muted); }
+.m-head { position: relative; }
+.m-menu { position: absolute; top: 0; right: 0; background: none; border: 1.5px solid var(--line); border-radius: 14px; padding: 2px 9px; font-size: 0.75rem; font-weight: 800; color: var(--muted); }
+.m-menu:hover { border-color: var(--pink); color: var(--ink); }

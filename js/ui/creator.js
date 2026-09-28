@@ -7,7 +7,7 @@
 
   const st = {
     step: 0,
-    d: { name: '', age: 38, look: { skin: '#d4a17a', hair: '#4a2f1f', hairStyle: 'short', outfit: '#2f6b3f', hat: 'safari' }, school: 'UC Davis', field: 'zoology', level: 'ba', career: null },
+    d: { name: '', gender: '', age: 38, look: { skin: '#d4a17a', hair: '#4a2f1f', hairStyle: 'short', outfit: '#2f6b3f', hat: 'safari' }, school: 'UC Davis', field: 'zoology', level: 'ba', career: null },
     zoo: null,
     profiles: null,
   };
@@ -58,6 +58,7 @@
       <div class="two">
         <div>
           <label>Name <input id="c-name" value="${esc(st.d.name)}" placeholder="e.g. Jordan Kealoha" maxlength="32"></label>
+          <h4>Gender</h4><div class="swatches">${D().genders.map((g) => `<button class="chip ${st.d.gender === g.id ? 'on' : ''}" data-gender="${g.id}">${g.name}</button>`).join('')}</div>
           <label>Age: <b id="c-age-l">${st.d.age}</b><input id="c-age" type="range" min="22" max="70" value="${st.d.age}"></label>
           <p class="sub">Age decides which careers you could realistically have had — and how much experience you bring.</p>
           <h4>Skin tone</h4>${swatches('skin', L.skin, true)}
@@ -68,7 +69,7 @@
         </div>
         <div class="preview"><div class="prevbox"><img id="c-prev" alt="Your director"></div><p id="c-prev-name">${esc(st.d.name || 'Your Name')}</p></div>
       </div>
-      <div class="nav"><button class="btn" data-c="back">Back</button><button class="btn primary" data-c="next" ${st.d.name.trim() ? '' : 'disabled'} id="c-next">Next: Education →</button></div>`;
+      <div class="nav"><button class="btn" data-c="back">Back</button><button class="btn primary" data-c="next" ${st.d.name.trim() && st.d.gender ? '' : 'disabled'} id="c-next">Next: Education →</button></div>`;
   }
 
   function drawPreview() {
@@ -244,6 +245,10 @@
         const s = ZG.Sim.newGame(Object.assign({}, st.d, { name: st.d.name.trim() }), st.zoo, seed);
         return ZG.App.start(s);
       } else if (d.look) st.d.look[d.look] = d.v;
+      else if (d.gender) {
+        st.d.gender = d.gender;
+        st.d.look.build = d.gender === 'woman' ? 'narrow' : d.gender === 'man' ? 'broad' : 'average';
+      }
       else if (d.field) st.d.field = d.field;
       else if (d.level) st.d.level = d.level;
       else if (d.career) st.d.career = d.career;
@@ -256,7 +261,7 @@
     if (name) {
       name.oninput = () => {
         st.d.name = name.value;
-        document.getElementById('c-next').disabled = !name.value.trim();
+        document.getElementById('c-next').disabled = !name.value.trim() || !st.d.gender;
         document.getElementById('c-prev-name').textContent = name.value || 'Your Name';
       };
       name.focus();

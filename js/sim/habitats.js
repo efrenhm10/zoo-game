@@ -117,6 +117,22 @@
     return { ok: true, msg: 'Renovation started.' };
   };
 
+  // Re-landscape a habitat for a different biome (a bigger renovation).
+  H.relandscapeCost = function (s, h) {
+    return Math.round(H.replaceCost(s, h) * 0.45 + 80000);
+  };
+  H.relandscape = function (s, hid, biome) {
+    const h = s.habitatsById[hid];
+    if (!h || h.construction || h.renovation || !ZG.BIOMES[biome]) return { ok: false, msg: 'Not available.' };
+    const cost = H.relandscapeCost(s, h);
+    if (!ZG.Econ.canAfford(s, cost, true)) return { ok: false, msg: 'Not enough funds.' };
+    ZG.Econ.spendCapital(s, 'capitalRepairs', cost);
+    const days = 120;
+    h.renovation = { days, total: days, biome };
+    ZG.Sim.news(s, `🌿 ${h.name} is being re-landscaped as ${ZG.BIOMES[biome].name} (${U.money(cost)}, ~4 months).`, 'info');
+    return { ok: true, msg: 'Re-landscaping started.' };
+  };
+
   H.upgradeTheming = function (s, hid) {
     const h = s.habitatsById[hid];
     const cost = Math.round(h.area * 220 * ZG.zoo(s).costMult);
@@ -182,6 +198,7 @@
       if (h.renovation) {
         h.renovation.days--;
         if (h.renovation.days <= 0) {
+          if (h.renovation.biome) h.biome = h.renovation.biome;
           h.renovation = null;
           h.condition = 95;
           s.novelty = Math.min(0.8, s.novelty + 0.05);

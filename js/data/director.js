@@ -31,6 +31,11 @@
       { id: 'ma', name: "Master's / MBA / MPA", mult: 1.35, board: 3, text: 'Stronger field bonus; boards like it.' },
       { id: 'phd', name: 'Doctorate (PhD / DVM)', mult: 1.7, board: 5, aza: 3, text: 'Biggest field bonus and scientific credibility.' },
     ],
+    genders: [
+      { id: 'woman', name: 'Woman', title: 'Ms.' },
+      { id: 'man', name: 'Man', title: 'Mr.' },
+      { id: 'nonbinary', name: 'Non-binary', title: 'Mx.' },
+    ],
     looks: {
       skin: ['#f6d7c3', '#eac09a', '#d4a17a', '#b07a55', '#8a5a3c', '#5e3b26'],
       hair: ['#1d1a18', '#4a2f1f', '#8a5a2b', '#c9a15a', '#e6d3a3', '#a33b20', '#9a9a9a', '#f2f2f2'],
@@ -97,4 +102,12 @@
     return m;
   };
   ZG.mod = (s, k) => (s.director && s.director.mods && s.director.mods[k] != null ? s.director.mods[k] : ['vet', 'fundraising', 'sponsors', 'construction', 'maintenance', 'marketing', 'crisis', 'media', 'finance'].includes(k) ? 1 : 0);
+
+  // Pronouns for the director, from the gender chosen at character creation.
+  ZG.pronoun = function (s) {
+    const g = (s && s.director && s.director.gender) || 'nonbinary';
+    if (g === 'woman') return { subj: 'she', obj: 'her', pos: 'her', Subj: 'She', title: 'Ms.' };
+    if (g === 'man') return { subj: 'he', obj: 'him', pos: 'his', Subj: 'He', title: 'Mr.' };
+    return { subj: 'they', obj: 'them', pos: 'their', Subj: 'They', title: 'Mx.' };
+  };
 })((globalThis.ZG = globalThis.ZG || {}));
