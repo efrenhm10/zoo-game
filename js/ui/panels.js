@@ -72,7 +72,7 @@
       <h3>🎯 Goals (by end of ${ZG.OBJ_DEADLINE})</h3><ul class="objs">${objs}</ul>
       <h3>Accreditation</h3>
       <p>Status: <b class="${s.acc.status === 'accredited' ? 'good' : 'bad'}">${s.acc.status.toUpperCase()}</b> · next inspection ${U.fmtMonth(s.acc.next)} (${Math.max(0, Math.round((s.acc.next - s.day) / 30))} months)</p>
-      <p class="tip">💡 Press <b>🚶 Walk</b> (or <kbd>Tab</kbd>) to walk the grounds as your director, meet the animals and overhear guests.</p>`;
+      <p class="tip">💡 Press <b>🚶 Walk</b> (or <kbd>Tab</kbd>) to walk the grounds as your director, meet the animals and overhear guests. In manage mode: drag to pan, right-drag to rotate, scroll to zoom, <kbd>WASD</kbd>/<kbd>Q</kbd><kbd>E</kbd> to move the camera.</p>`;
   };
 
   P.alerts = function (s) {
@@ -152,7 +152,7 @@
         if (x.biome < 100) notes.push('wrong biome');
         if (x.climate < 80) notes.push(`climate stress (${Math.round(x.tempDiff)}°F outside range)`);
         if (x.social < 90) notes.push(x.n < sp.group[0] ? `group too small (ideal ${sp.group[0]}–${sp.group[1]})` : 'group too large');
-        html += `<p>${sp.emoji} <b>${sp.name}</b> ×${x.n} — habitat welfare <b class="${cls(x.w)}">${Math.round(x.w)}</b>${notes.length ? ` <span class="warn">(${notes.join(', ')})</span>` : ''}</p>`;
+        html += `<p class="sprow">${ZG.Portraits.img(id, 'portrait xs')} <b>${sp.name}</b> ×${x.n} — habitat welfare <b class="${cls(x.w)}">${Math.round(x.w)}</b>${notes.length ? ` <span class="warn">(${notes.join(', ')})</span>` : ''}</p>`;
       }
     }
     if (!animals.length) html += `<p class="warn">No animals here. Get some from the Animal Exchange (Collection tab) or SSP recommendations.</p>`;
@@ -197,18 +197,20 @@
       const flags = [a.star ? '⭐' : '', a.preg ? '🤰' : '', a.sick ? `<span title="${esc(a.sick.name)}">🤒</span>` : '', a.inbred ? '<span title="Inbred">⚠️</span>' : '', a.age < 365 ? '🍼' : ''].join('');
       const breedable = sp.breeds && ZG.Animals.isMature(a);
       const moving = P.ui.moveFor === a.id;
-      return `<tr><td>${sp.emoji}</td><td><b>${esc(a.name)}</b> ${a.sex === 'M' ? '♂' : '♀'} ${flags}<br><small>${sp.name} · ${U.ageStr(a.age)} · GV ${a.gv}</small></td>
-        <td style="width:70px"><small>W</small>${bar(a.welfare)}<small>H</small>${bar(a.health)}</td>
-        <td class="acts">${breedable ? btn(a.contra ? '💊 Contracepted' : '💞 Breeding', 'contra', { aid: a.id }, 'sm ' + (a.contra ? '' : 'on')) : ''}
-        ${moving ? `<select data-move="${a.id}"><option value="">Move to…</option>${habs.filter((h) => h.id !== a.hab).map((h) => `<option value="${h.id}">${esc(h.name)}</option>`).join('')}</select>` : btn('Move', 'moveOpen', { aid: a.id }, 'sm')}
-        ${sp.program !== 'Loan' ? btn('Transfer out', 'sendOut', { aid: a.id }, 'sm') : ''}</td></tr>`;
+      return `<div class="acard2">
+        <div class="round">${ZG.Portraits.img(a.sp, 'portrait md')}<span class="banner">${esc(a.name)}</span></div>
+        <div class="ainfo"><small>${sp.name} · ${a.sex === 'M' ? '♂' : '♀'} · ${U.ageStr(a.age)} · GV ${a.gv} ${flags}</small>
+          <div class="mini2"><span>Welfare</span>${bar(a.welfare)}<span>Health</span>${bar(a.health)}</div>
+          <div class="acts">${breedable ? btn(a.contra ? '💊 Contracepted' : '💞 Breeding', 'contra', { aid: a.id }, 'sm ' + (a.contra ? '' : 'on')) : ''}
+          ${moving ? `<select data-move="${a.id}"><option value="">Move to…</option>${habs.filter((h) => h.id !== a.hab).map((h) => `<option value="${h.id}">${esc(h.name)}</option>`).join('')}</select>` : btn('Move', 'moveOpen', { aid: a.id }, 'sm')}
+          ${sp.program !== 'Loan' ? btn('Transfer', 'sendOut', { aid: a.id }, 'sm') : ''}</div></div></div>`;
     };
     let html = `<h2>🦒 Collection (${s.animals.length} animals)</h2><p class="sub">Plus a supporting collection of birds, reptiles & invertebrates. 💊 = on contraception; 💞 = allowed to breed. Follow SSP recommendations to avoid unplanned births.</p>`;
-    if (byHab.q) html += `<h3>🏥 Quarantine</h3><table class="list animals">${byHab.q.map(row).join('')}</table>`;
+    if (byHab.q) html += `<h3>🏥 Quarantine</h3><div class="agrid">${byHab.q.map(row).join('')}</div>`;
     for (const h of habs) {
       const list = byHab[h.id];
       html += `<h3 data-act="select" data-plot="${h.plot}" class="click">${esc(h.name)} <small>(${list ? list.length : 0})</small></h3>`;
-      html += list ? `<table class="list animals">${list.map(row).join('')}</table>` : '<p class="sub">Empty.</p>';
+      html += list ? `<div class="agrid">${list.map(row).join('')}</div>` : '<p class="sub">Empty.</p>';
     }
     html += P.market(s);
     return html;
@@ -221,7 +223,7 @@
         const sp = spn(o.sp);
         const good = habs.filter((h) => sp.biomes.includes(h.biome));
         const opts = habs.map((h) => `<option value="${h.id}" ${good.includes(h) && s.animals.some((a) => a.hab === h.id && a.sp === o.sp) ? 'selected' : ''}>${sp.biomes.includes(h.biome) ? '✓ ' : '✗ '}${esc(h.name)}</option>`).join('');
-        return `<div class="card offer"><div>${sp.emoji} <b>${o.count > 1 ? o.count + '× ' : ''}${sp.name}</b> <small>${o.count === 1 ? (o.sex === 'M' ? '♂' : '♀') + ' · ' : ''}${U.ageStr(o.age)} · GV ${o.gv} · ${sp.iucn}${sp.program === 'SSP' ? ' · SSP' : ''}</small><br><small>From ${esc(o.from)} · ${o.kind === 'rescue' ? 'rescue' : 'AZA loan (no purchase price)'} · expires ${U.fmtDate(o.expires)}</small></div>
+        return `<div class="card offer"><div class="offer-top">${ZG.Portraits.img(o.sp, 'portrait sm')}<div><b>${o.count > 1 ? o.count + '× ' : ''}${sp.name}</b> <small>${o.count === 1 ? (o.sex === 'M' ? '♂' : '♀') + ' · ' : ''}${U.ageStr(o.age)} · GV ${o.gv} · ${sp.iucn}${sp.program === 'SSP' ? ' · SSP' : ''}</small><br><small>From ${esc(o.from)} · ${o.kind === 'rescue' ? 'rescue' : 'AZA loan (no purchase price)'} · expires ${U.fmtDate(o.expires)}</small></div></div>
           <div class="actions"><select data-acq="${o.id}"><option value="">Choose habitat…</option>${opts}</select>${btn(`Accept (${$(o.cost)} transport)`, 'acquire', { oid: o.id }, 'sm primary')}</div></div>`;
       })
       .join('');
@@ -245,7 +247,7 @@
           } else acts = btn(r.type === 'nobreed' ? 'Acknowledge' : 'Accept', 'ssp', { rid: r.id, yes: 1 }, 'sm primary');
           acts += btn('Decline', 'ssp', { rid: r.id, yes: 0 }, 'sm');
         }
-        return `<div class="card rec ${r.status}"><div><b>${typeName}</b> · ${sp.emoji} ${sp.name} <small>(${sp.iucn})</small> <span class="pill">${r.status}</span></div><p>${esc(r.text)}</p><small>${esc(r.partner)} · respond by ${U.fmtDate(r.deadline)}</small><div class="actions">${acts}</div></div>`;
+        return `<div class="card rec ${r.status}"><div class="offer-top">${ZG.Portraits.img(r.sp, 'portrait sm')}<div><b>${typeName}</b> · ${sp.name} <small>(${sp.iucn})</small> <span class="pill">${r.status}</span></div></div><p>${esc(r.text)}</p><small>${esc(r.partner)} · respond by ${U.fmtDate(r.deadline)}</small><div class="actions">${acts}</div></div>`;
       })
       .join('');
     const parts = Object.entries(sc.parts).map(([k, v]) => `<tr><td>${k}</td><td style="width:110px">${bar(v)}</td><td>${Math.round(v)}</td></tr>`).join('');

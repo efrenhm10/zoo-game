@@ -4,32 +4,40 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Zoo Director</title>
-  <meta name="description" content="A realistic zoo-management simulation: budgets, politics, AZA breeding programs, disasters and the animals themselves.">
+  <meta name="description" content="A realistic 3D zoo-management simulation: budgets, politics, AZA breeding programs, disasters and the animals themselves.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦒</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Luckiest+Guy&display=swap">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div id="start-screen"></div>
 
   <div id="game" class="hidden">
-    <header id="topbar"></header>
-    <main>
-      <div id="map-wrap">
-        <canvas id="map"></canvas>
-        <div id="tooltip"></div>
-        <div id="walkhud"></div>
-      </div>
-      <aside id="sidebar">
-        <nav id="tabs"></nav>
-        <div id="panel"></div>
-      </aside>
-    </main>
-    <footer id="ticker"></footer>
+    <div id="view">
+      <canvas id="map"></canvas>
+      <div id="overlay"></div>
+      <div id="tooltip"></div>
+      <div id="walkhud"></div>
+    </div>
+    <div id="badge"></div>
+    <div id="ticker"></div>
+    <div id="clock"></div>
+    <section id="window" class="hidden">
+      <header><h2 id="wintitle"></h2><button class="winclose" data-winclose="1" title="Close (Esc)">×</button></header>
+      <div id="panel"></div>
+    </section>
+    <footer id="bottombar">
+      <div id="statsbar"></div>
+      <nav id="toolbar"></nav>
+      <div id="controls"></div>
+    </footer>
   </div>
 
   <div id="modal-root"></div>
   <div id="toast"></div>
 
+  <script src="js/vendor/three.min.js"></script>
   <script src="js/core/util.js"></script>
   <script src="js/data/species.js"></script>
   <script src="js/data/names.js"></script>
@@ -45,7 +53,9 @@
   <script src="js/sim/development.js"></script>
   <script src="js/sim/events.js"></script>
   <script src="js/sim/sim.js"></script>
-  <script src="js/ui/render.js"></script>
+  <script src="js/ui/models.js"></script>
+  <script src="js/ui/world3d.js"></script>
+  <script src="js/ui/portraits.js"></script>
   <script src="js/ui/panels.js"></script>
   <script src="js/ui/creator.js"></script>
   <script src="js/ui/app.js"></script>

@@ -17,6 +17,8 @@
   let pendingResult = null;
   const el = {};
 
+  App.getState = () => s;
+
   App.hasSave = () => {
     try {
       return !!localStorage.getItem(SAVE_KEY);
@@ -26,10 +28,22 @@
   };
 
   App.boot = function () {
-    for (const id of ['start-screen', 'game', 'map', 'panel', 'tabs', 'topbar', 'ticker', 'modal-root', 'tooltip', 'toast', 'walkhud'])
+    for (const id of ['start-screen', 'game', 'map', 'overlay', 'panel', 'window', 'wintitle', 'toolbar', 'statsbar', 'controls', 'clock', 'badge', 'ticker', 'modal-root', 'tooltip', 'toast', 'walkhud'])
       el[id] = document.getElementById(id);
+    if (!ZG.Render.supported()) {
+      el['start-screen'].innerHTML = '<div class="creator"><div class="title-screen"><h1>Zoo Director</h1><p>This game needs WebGL (3D graphics). Please use a recent version of Chrome, Edge, Firefox or Safari with hardware acceleration enabled.</p></div></div>';
+      return;
+    }
+    ZG.Render.init(el.map, el.overlay);
+    ZG.Render.bindInput(() => s, {
+      hover: (p, x, y) => tooltip(p, x, y),
+      select: (p) => {
+        ZG.Actions.select(s, { plot: p.id });
+        openWindow('habitats');
+      },
+      observe: (p) => openObserve(p),
+    });
     ZG.Creator.open(el['start-screen']);
-    ZG.Render.init(el.map);
     bindInput();
     requestAnimationFrame(loop);
   };
@@ -40,11 +54,8 @@
     el['start-screen'].classList.add('hidden');
     el.game.classList.remove('hidden');
     ZG.Render.resize();
-    ZG.Render.fitCamera();
-    ZG.Panels.ui.tab = 'overview';
     speedIdx = 1;
-    renderTabs();
-    panelDirty = true;
+    openWindow('overview');
     App.save(true);
   };
 
@@ -104,39 +115,66 @@
 
   // ------------------------------------------------------------------
   const WEATHER_ICON = { sunny: '☀️', cloudy: '⛅', rain: '🌧️', storm: '⛈️', snow: '🌨️', heat: '🥵', smoke: '🌫️' };
+  const stars = (v) => {
+    const n = Math.round((v / 100) * 10) / 2;
+    let out = '';
+    for (let i = 1; i <= 5; i++) out += n >= i ? '★' : n >= i - 0.5 ? '⯪' : '☆';
+    return out;
+  };
+  function setHTML(e, html) {
+    if (e._last !== html) {
+      e.innerHTML = html;
+      e._last = html;
+    }
+  }
   function renderTopbar() {
     const Z = ZG.zoo(s);
     const t = U.dateOf(s.day);
-    const html = `<div class="tb-left"><b class="zname">${Z.emoji} ${esc(Z.name)}</b><span class="date">${U.DOW[t.dow]} ${U.fmtDate(s.day)}</span><span class="wx">${WEATHER_ICON[s.today.weather] || ''} ${s.today.temp}°F</span></div>
-      <div class="tb-speed">${['⏸', '▶', '▶▶', '▶▶▶', '⏩'].map((l, i) => `<button class="spd ${i === speedIdx ? 'on' : ''}" data-speed="${i}" title="${i ? SPEEDS[i] + '× speed' : 'Pause'} (key ${i === 0 ? 'Space' : i})">${l}</button>`).join('')}</div>
-      <div class="tb-stats">
-        <span title="Operating cash"><small>Cash</small><b class="${s.cash < 0 ? 'bad' : ''}">${U.money(s.cash)}</b></span>
-        <span title="Capital fund (restricted)"><small>Capital</small><b>${U.money(s.capital)}</b></span>
-        <span title="Guests today"><small>Guests</small><b>${U.num(s.today.guests)}</b></span>
-        <span title="Animal welfare"><small>Welfare</small><b class="${cl(ZG.Animals.avgWelfare(s))}">${Math.round(ZG.Animals.avgWelfare(s))}</b></span>
-        <span title="Guest satisfaction"><small>Guests ☺</small><b class="${cl(s.satisfaction)}">${Math.round(s.satisfaction)}</b></span>
-        <span title="AZA standing"><small>AZA</small><b class="${cl(s.aza)}">${Math.round(s.aza)}</b></span>
-        <span title="Confidence of your boss"><small>Job</small><b class="${cl(s.board)}">${Math.round(s.board)}</b></span>
-      </div>
-      <div class="tb-right"><button class="btn walk ${ZG.Render.state.walk ? 'on' : ''}" data-top="walk" title="Walk the grounds (Tab)">🚶 ${ZG.Render.state.walk ? 'Overview' : 'Walk'}</button><button class="btn" data-top="help" title="How to play">❓</button><button class="btn" data-top="save" title="Save">💾</button><button class="btn" data-top="menu" title="Main menu">☰</button></div>`;
-    if (html !== el.topbar._last) {
-      el.topbar.innerHTML = html;
-      el.topbar._last = html;
-    }
+    const alerts = ZG.Panels.alerts(s).length;
+    setHTML(el.badge, `<span class="zemo">${Z.emoji}</span><div><b>${esc(Z.name)}</b><small>Director ${esc(s.director.name)}</small></div>${alerts ? `<button class="alert-btn" data-open="overview" title="Needs attention">⚠️ ${alerts}</button>` : ''}`);
+    const w = ZG.Animals.avgWelfare(s);
+    setHTML(el.statsbar, `
+      <span title="Operating cash"><i>💵</i><b class="${s.cash < 0 ? 'bad' : ''}">${U.money(s.cash)}</b></span>
+      <span title="Capital fund (restricted)"><i>🏗️</i><b>${U.money(s.capital)}</b></span>
+      <span title="Guests today"><i>👥</i><b>${U.num(s.today.guests)}</b></span>
+      <span title="Public reputation ${Math.round(s.rep)}/100" class="stars">${stars(s.rep)}</span>
+      <span title="Animal welfare"><i>🐾</i><b class="${cl(w)}">${Math.round(w)}</b></span>
+      <span title="Guest satisfaction"><i>🙂</i><b class="${cl(s.satisfaction)}">${Math.round(s.satisfaction)}</b></span>
+      <span title="AZA standing"><i>🧬</i><b class="${cl(s.aza)}">${Math.round(s.aza)}</b></span>
+      <span title="Your boss's confidence in you"><i>💼</i><b class="${cl(s.board)}">${Math.round(s.board)}</b></span>`);
+    setHTML(el.clock, `<span class="wx" title="Weather">${WEATHER_ICON[s.today.weather] || ''} ${s.today.temp}°F</span>
+      <span class="date">${U.DOW[t.dow]} ${U.fmtDate(s.day)}</span>
+      <span class="speeds">${['⏸', '▶', '▶▶', '▶▶▶', '⏩'].map((l, i) => `<button class="spd ${i === speedIdx ? 'on' : ''}" data-speed="${i}" title="${i ? SPEEDS[i] + '× speed' : 'Pause'} (key ${i === 0 ? 'Space' : i})">${l}</button>`).join('')}</span>`);
+    setHTML(el.controls, `<button class="ctl walk ${ZG.Render.state.walk ? 'on' : ''}" data-top="walk" title="Walk the grounds (Tab)">🚶 ${ZG.Render.state.walk ? 'Manage' : 'Walk'}</button>
+      <button class="ctl" data-top="help" title="How to play">?</button><button class="ctl" data-top="save" title="Save">💾</button><button class="ctl" data-top="menu" title="Main menu">☰</button>`);
     const n = s.news[0];
-    const tk = n ? `<span class="${n.kind}">${esc(n.text)}</span>` : '';
-    if (tk !== el.ticker._last) {
-      el.ticker.innerHTML = tk;
-      el.ticker._last = tk;
-    }
+    setHTML(el.ticker, n ? `<span class="${n.kind}">${esc(n.text)}</span>` : '');
   }
   const cl = (v) => (v >= 70 ? 'good' : v >= 50 ? 'warn' : 'bad');
 
   function renderTabs() {
-    el.tabs.innerHTML = ZG.Panels.TABS.map((t) => `<button class="tab ${ZG.Panels.ui.tab === t.id ? 'on' : ''}" data-act="tab" data-tab="${t.id}" title="${t.name}">${t.icon}<span>${t.name}</span></button>`).join('');
+    const cur = winOpen ? ZG.Panels.ui.tab : null;
+    el.toolbar.innerHTML = ZG.Panels.TABS.map((t) => `<button class="tool ${cur === t.id ? 'on' : ''}" data-open="${t.id}" title="${t.name}"><span>${t.icon}</span>${t.name}</button>`).join('');
+  }
+  let winOpen = false;
+  function openWindow(tab) {
+    if (winOpen && ZG.Panels.ui.tab === tab && tab !== 'habitats') return closeWindow();
+    ZG.Panels.ui.tab = tab;
+    winOpen = true;
+    el.window.classList.remove('hidden');
+    const t = ZG.Panels.TABS.find((x) => x.id === tab);
+    el.wintitle.textContent = `${t.icon} ${t.name}`;
+    el.panel.scrollTop = 0;
+    renderTabs();
+    renderPanel(true);
+  }
+  function closeWindow() {
+    winOpen = false;
+    el.window.classList.add('hidden');
+    renderTabs();
   }
   function renderPanel(force) {
-    if (!s) return;
+    if (!s || !winOpen) return;
     const active = document.activeElement;
     if (!force && active && el.panel.contains(active) && (active.tagName === 'INPUT' || active.tagName === 'SELECT')) return;
     const scroll = el.panel.scrollTop;
@@ -146,6 +184,8 @@
     panelDirty = false;
   }
   App.refresh = function () {
+    const t = ZG.Panels.TABS.find((x) => x.id === ZG.Panels.ui.tab);
+    if (winOpen && t) el.wintitle.textContent = `${t.icon} ${t.name}`;
     renderTabs();
     renderPanel(true);
   };
@@ -211,7 +251,7 @@
           if (a.loc === 'quarantine') notes.push('In quarantine at the hospital');
           if (a.welfare < 55) notes.push('Keepers are worried about stress behaviors');
           else if (a.welfare > 82) notes.push('Thriving');
-          return `<div class="acard"><div class="aemo">${sp.emoji}</div><div><b>${esc(a.name)}</b> ${a.sex === 'M' ? '♂' : '♀'} <small>${sp.name}, ${U.ageStr(a.age)}</small><br><i>${a.loc === 'hab' ? 'Currently ' + esc(a.mood) : 'Not on exhibit'}</i><br><small>Welfare ${Math.round(a.welfare)} · Health ${Math.round(a.health)} · ${sp.iucn} ${sp.program === 'SSP' ? '· SSP' : ''}</small>${notes.length ? `<br><small>${notes.join(' · ')}</small>` : ''}</div></div>`;
+          return `<div class="acard">${ZG.Portraits.img(a.sp, 'portrait md')}<div><b>${esc(a.name)}</b> ${a.sex === 'M' ? '♂' : '♀'} <small>${sp.name}, ${U.ageStr(a.age)}</small><br><i>${a.loc === 'hab' ? 'Currently ' + esc(a.mood) : 'Not on exhibit'}</i><br><small>Welfare ${Math.round(a.welfare)} · Health ${Math.round(a.health)} · ${sp.iucn} ${sp.program === 'SSP' ? '· SSP' : ''}</small>${notes.length ? `<br><small>${notes.join(' · ')}</small>` : ''}</div></div>`;
         })
         .join('');
       const f = s._hf && s._hf[h.id];
@@ -276,6 +316,8 @@
   function setWalk(on) {
     ZG.Render.setWalk(s, on);
     if (on && speedIdx > 2) speedIdx = 1;
+    if (on) closeWindow();
+    document.body.classList.toggle('walking', on);
   }
 
   // ------------------------------------------------------------------
@@ -288,16 +330,25 @@
         speedIdx = +sp.dataset.speed;
         return;
       }
+      const op = t.closest('[data-open]');
+      if (op) {
+        openWindow(op.dataset.open);
+        return;
+      }
+      if (t.closest('[data-winclose]')) return closeWindow();
       const top = t.closest('[data-top]');
       if (top) {
         const a = top.dataset.top;
         if (a === 'walk') setWalk(!ZG.Render.state.walk);
+        if (a === 'walk') return;
         if (a === 'save') App.save();
         if (a === 'help') openHelp();
         if (a === 'menu') {
           App.save(true);
           if (confirm('Return to the main menu? Your game is saved.')) {
             s = null;
+            ZG.Render.reset();
+            closeWindow();
             el.game.classList.add('hidden');
             el['start-screen'].classList.remove('hidden');
             ZG.Creator.open(el['start-screen']);
@@ -312,22 +363,25 @@
       if (man) {
         closeModal();
         ZG.Actions.select(s, { plot: man.dataset.manage });
-        App.refresh();
+        setWalk(false);
+        openWindow('habitats');
         return;
       }
       const plan = t.closest('[data-plan]');
       if (plan) {
         closeModal();
         ZG.Actions.select(s, { plot: plan.dataset.plan });
-        App.refresh();
+        setWalk(false);
+        openWindow('habitats');
         return;
       }
       const act = t.closest('[data-act]');
-      if (act && (el.panel.contains(act) || el.tabs.contains(act))) {
+      if (act && el.panel.contains(act)) {
         const fn = ZG.Actions[act.dataset.act];
         if (!fn) return;
         const r = fn(s, act.dataset, act);
         if (r && r.msg) toast(r.msg, !r.ok);
+        if (act.dataset.act === 'select' && act.dataset.plot != null) ZG.Render.focusPlot(s, +act.dataset.plot);
         App.refresh();
       }
     });
@@ -365,62 +419,7 @@
       if (t.dataset && (t.dataset.acq || t.dataset.rechab)) t.blur();
     });
 
-    // Map interactions
-    const cv = el.map;
     const R = ZG.Render.state;
-    cv.addEventListener('mousemove', (e) => {
-      if (!s) return;
-      const r = cv.getBoundingClientRect();
-      const sx = e.clientX - r.left, sy = e.clientY - r.top;
-      if (R.drag) {
-        R.cam.x = R.drag.cx - (sx - R.drag.sx) / R.cam.zoom;
-        R.cam.y = R.drag.cy - (sy - R.drag.sy) / R.cam.zoom;
-        R.drag.moved = R.drag.moved || Math.hypot(sx - R.drag.sx, sy - R.drag.sy) > 4;
-        return;
-      }
-      const w = ZG.Render.screenToWorld(sx, sy);
-      const p = ZG.Render.plotAt(s, w.x, w.y);
-      R.hover = p ? p.id : null;
-      tooltip(p, e.clientX - r.left, e.clientY - r.top);
-    });
-    cv.addEventListener('mouseleave', () => {
-      R.hover = null;
-      el.tooltip.style.display = 'none';
-      R.drag = null;
-    });
-    cv.addEventListener('mousedown', (e) => {
-      const r = cv.getBoundingClientRect();
-      R.drag = { sx: e.clientX - r.left, sy: e.clientY - r.top, cx: R.cam.x, cy: R.cam.y, moved: false };
-    });
-    cv.addEventListener('mouseup', (e) => {
-      if (!s) return;
-      const moved = R.drag && R.drag.moved;
-      R.drag = null;
-      if (moved) return;
-      const r = cv.getBoundingClientRect();
-      const w = ZG.Render.screenToWorld(e.clientX - r.left, e.clientY - r.top);
-      const p = ZG.Render.plotAt(s, w.x, w.y);
-      if (R.walk) {
-        if (p && Math.hypot(w.x - R.avatar.x, w.y - R.avatar.y) < 220 && ZG.Render.nearbyPlot(s) === p) openObserve(p);
-        else R.avatar.target = { x: w.x, y: w.y };
-        return;
-      }
-      if (p) {
-        ZG.Actions.select(s, { plot: p.id });
-        App.refresh();
-      }
-    });
-    cv.addEventListener(
-      'wheel',
-      (e) => {
-        if (!s) return;
-        e.preventDefault();
-        const f = e.deltaY < 0 ? 1.12 : 1 / 1.12;
-        R.cam.zoom = U.clamp(R.cam.zoom * f, ZG.Render.minZoom(), 4);
-      },
-      { passive: false }
-    );
-
     window.addEventListener('keydown', (e) => {
       if (!s) return;
       const tag = (document.activeElement && document.activeElement.tagName) || '';
@@ -437,13 +436,14 @@
         setWalk(!R.walk);
         return;
       }
-      if (R.walk && ['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Shift'].includes(k)) {
-        R.keys[k] = true;
-        e.preventDefault();
-        return;
-      }
       if (R.walk && k === 'e') {
         openObserve(ZG.Render.nearbyPlot(s));
+        return;
+      }
+      if (e.key === 'Escape' && winOpen) return closeWindow();
+      if (['w', 'a', 's', 'd', 'q', 'e', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Shift'].includes(k)) {
+        R.keys[k] = true;
+        e.preventDefault();
         return;
       }
       if (k === ' ') {

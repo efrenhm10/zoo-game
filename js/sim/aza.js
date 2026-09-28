@@ -169,7 +169,7 @@
   };
 
   // ---------- Animal exchange (acquisitions) ----------
-  const RESCUE = ['grizzly_bear', 'mountain_lion', 'moose', 'sea_lion', 'river_otter', 'alligator'];
+  const RESCUE = ['grizzly_bear', 'mountain_lion', 'moose', 'sea_lion', 'river_otter', 'alligator', 'black_bear'];
   Z_.refreshMarket = function (s) {
     s.market = s.market.filter((o) => o.expires > s.day);
     const Z = ZG.zoo(s);

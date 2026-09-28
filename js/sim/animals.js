@@ -4,9 +4,9 @@
   const A = (ZG.Animals = {});
 
   const POOL_BY_SPECIES = {
-    african: ['african_elephant', 'giraffe', 'grevys_zebra', 'white_rhino', 'hippo', 'pygmy_hippo', 'lion', 'cheetah', 'gorilla', 'chimpanzee', 'african_penguin', 'bongo', 'warthog', 'ring_tailed_lemur', 'flamingo'],
-    asian: ['asian_elephant', 'amur_tiger', 'sumatran_tiger', 'snow_leopard', 'clouded_leopard', 'orangutan', 'giant_panda', 'red_panda', 'sun_bear', 'komodo'],
-    american: ['mountain_lion', 'grizzly_bear', 'mexican_wolf', 'moose', 'bison', 'sea_lion', 'river_otter', 'california_condor', 'alligator', 'andean_bear', 'sloth', 'galapagos_tortoise', 'polar_bear', 'koala', 'red_kangaroo'],
+    african: ['african_elephant', 'giraffe', 'grevys_zebra', 'white_rhino', 'hippo', 'pygmy_hippo', 'lion', 'cheetah', 'gorilla', 'chimpanzee', 'african_penguin', 'bongo', 'warthog', 'ring_tailed_lemur', 'flamingo', 'african_buffalo', 'african_leopard', 'african_wild_dog', 'ostrich', 'okapi'],
+    asian: ['asian_elephant', 'amur_tiger', 'sumatran_tiger', 'snow_leopard', 'clouded_leopard', 'orangutan', 'giant_panda', 'red_panda', 'sun_bear', 'komodo', 'water_monitor', 'bactrian_camel'],
+    american: ['mountain_lion', 'grizzly_bear', 'mexican_wolf', 'moose', 'bison', 'sea_lion', 'river_otter', 'california_condor', 'alligator', 'andean_bear', 'sloth', 'galapagos_tortoise', 'polar_bear', 'koala', 'red_kangaroo', 'black_bear', 'alpaca', 'jaguar', 'arctic_fox'],
   };
 
   A.nameFor = function (s, spId) {

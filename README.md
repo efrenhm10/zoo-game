@@ -2,7 +2,7 @@
 
 A browser-based **zoo management simulation** inspired by *Planet Zoo* — but focused on the real job of running an American zoo. You won't be clicking to feed every animal. You'll be fighting for budgets, managing the collection with the AZA, keeping up with deferred maintenance, courting donors and sponsors, and making hard calls when an animal gets sick or a hurricane heads your way.
 
-Everything is plain HTML/CSS/JavaScript: no build step and no dependencies.
+It's a **3D game** that runs in your browser (WebGL via a bundled copy of Three.js). You get an aerial park with rolling terrain, lakes and forest; naturalistic habitats with hills, ponds, rocks and trees; fences and glass houses; animated low-poly animals for all 56 species; crowds of guests; and weather. The interface is modeled on *Planet Zoo 2*: cream tool windows, a green bottom toolbar, and field-guide roundel portraits of every animal. There is no build step and nothing to install.
 
 ## ▶️ Play
 
@@ -33,6 +33,7 @@ Figures are gameplay approximations inspired by the real institutions. Animal na
 
 ## 🎮 What you manage
 
+- **Camera (manage mode).** Drag to pan, right-drag (or Shift+drag) to rotate, scroll to zoom, and use `WASD`/arrows to move and `Q`/`E` to rotate. Click a habitat to manage it.
 - **Walk the grounds.** Press `Tab` (or 🚶 Walk) to control your avatar with `WASD`/arrow keys (hold `Shift` to jog), or click where you want to go. Stand at a habitat and press `E` to observe each animal: its name, age and what it's doing right now. You'll also hear from keepers and see guest thought bubbles that reflect the actual simulation ("$40 for tickets?!", "the restrooms are closed again", "a baby giraffe!").
 - **Collection & AZA Species Survival Plans.** Animals are on contraception by default. Each February the SSP publishes Breeding & Transfer Plans: breed this pair, send this animal to another zoo, receive a mate, do *not* breed, or hold space for a species. Following them earns AZA standing; unplanned or inbred births cost you. Accredited zoos move animals on breeding loans rather than buying them, so you pay transport and quarantine (60 days in Hawaiʻi).
 - **Animal welfare** comes from space, social group size, habitat quality, biome, climate (including heated or chilled buildings) and keeper care. Animals age, get sick, give birth (including maternal rejection and hand-rearing dilemmas), and die.
@@ -54,7 +55,12 @@ js/core/util.js       seeded RNG, formatting, calendar
 js/data/              species, zoos, director backgrounds, name pools
 js/sim/               simulation (no DOM): animals, staff, infra, habitats,
                       economy, aza, politics, development, events, sim
-js/ui/                render (canvas map, walk mode), panels, creator, app
+js/ui/models.js       procedural 3D animals (56 species), people, avatar, trees
+js/ui/world3d.js      3D world: terrain, habitats, buildings, agents, cameras, weather
+js/ui/portraits.js    roundel portraits rendered from the 3D models
+js/ui/                panels, creator, app (UI shell)
+js/vendor/            three.min.js (r149, MIT)
+tools/gallery.html    preview every species model
 tools/headless.js     runs the simulation without a browser for balancing
 ```
 

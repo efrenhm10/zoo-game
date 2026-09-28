@@ -203,6 +203,54 @@
     fert: 1 / 100, care: 0.07, food: 1500, appeal: 3, transport: 4000, size: 20, mix: 'plains',
     behaviors: ['kneeling to graze', 'running with its tail straight up', 'mud-wallowing'] });
 
+
+  // Additional species
+  sp('african_buffalo', { name: 'African Buffalo', sci: 'Syncerus caffer', emoji: '🐃', cls: 'mammal', iucn: 'NT', biomes: ['savanna'], climate: [35, 105],
+    space: 400, group: [3, 10], life: 22, mature: 4, gestation: 340, interbirth: 450, fert: 1 / 150, care: 0.15, food: 5000, appeal: 4, danger: 3,
+    transport: 15000, size: 30, mix: 'plains', heavy: 1, behaviors: ['wallowing in mud', 'grazing with the herd', 'staring down a keeper truck'] });
+  sp('african_leopard', { name: 'African Leopard', sci: 'Panthera pardus pardus', emoji: '🐆', cls: 'mammal', iucn: 'VU', biomes: ['savanna', 'forest'],
+    climate: [30, 104], space: 250, group: [1, 2], life: 17, mature: 3, gestation: 96, litter: [1, 3], interbirth: 500, fert: 1 / 120, care: 0.25,
+    food: 7500, appeal: 7, danger: 3, transport: 12000, size: 26, rejectRisk: 0.12, behaviors: ['draped over a high branch', 'stalking in the grass', 'grooming'] });
+  sp('african_wild_dog', { name: 'African Painted Dog', sci: 'Lycaon pictus', emoji: '🐕', cls: 'mammal', iucn: 'EN', program: 'SSP', biomes: ['savanna'],
+    climate: [35, 104], space: 180, group: [4, 12], life: 11, mature: 2, gestation: 70, litter: [4, 10], interbirth: 365, fert: 1 / 120, care: 0.12,
+    food: 3500, appeal: 5, danger: 2, transport: 6000, size: 22, behaviors: ['twittering greetings', 'running laps as a pack', 'napping in a heap'] });
+  sp('aldabra_tortoise', { name: 'Aldabra Giant Tortoise', sci: 'Aldabrachelys gigantea', emoji: '🐢', cls: 'reptile', iucn: 'VU', biomes: ['tropical', 'savanna'],
+    climate: [60, 102], space: 120, group: [2, 8], life: 120, mature: 25, gestation: 110, litter: [4, 12], interbirth: 730, fert: 1 / 200, care: 0.07,
+    food: 1800, appeal: 4, transport: 8000, size: 24, infantSurv: 0.7, behaviors: ['eating greens', 'basking', 'soaking in a mud pool'] });
+  sp('alpaca', { name: 'Alpaca', sci: 'Vicugna pacos', emoji: '🦙', cls: 'mammal', iucn: 'LC', biomes: ['mountain', 'temperate'], climate: [0, 90],
+    space: 150, group: [3, 10], life: 20, mature: 2, gestation: 345, interbirth: 400, fert: 1 / 100, care: 0.06, food: 1200, appeal: 3, transport: 2500,
+    size: 24, behaviors: ['humming', 'rolling in a dust patch', 'peering at kids'] });
+  sp('alpine_goat', { name: 'Alpine Goat', sci: 'Capra hircus', emoji: '🐐', cls: 'mammal', iucn: 'LC', biomes: ['temperate', 'mountain'], climate: [-10, 100],
+    space: 40, group: [4, 12], life: 14, mature: 1, gestation: 150, litter: [1, 3], interbirth: 300, fert: 1 / 60, care: 0.04, food: 600, appeal: 2,
+    transport: 800, size: 20, behaviors: ['being brushed by children', 'climbing the play structure', 'chewing on everything'] });
+  sp('alpine_ibex', { name: 'Alpine Ibex', sci: 'Capra ibex', emoji: '🐐', cls: 'mammal', iucn: 'LC', biomes: ['mountain'], climate: [-30, 85],
+    space: 200, group: [3, 10], life: 18, mature: 3, gestation: 165, interbirth: 365, fert: 1 / 100, care: 0.08, food: 2000, appeal: 4, transport: 8000,
+    size: 24, behaviors: ['balanced on a sheer rock face', 'clashing horns', 'licking minerals'] });
+  sp('black_bear', { name: 'American Black Bear', sci: 'Ursus americanus', emoji: '🐻', cls: 'mammal', iucn: 'LC', breeds: false,
+    biomes: ['temperate', 'mountain', 'forest'], climate: [-20, 95], space: 300, group: [1, 3], life: 25, mature: 4, gestation: 220, care: 0.25,
+    food: 6000, appeal: 6, danger: 3, transport: 6000, size: 28, behaviors: ['flipping logs for grubs', 'climbing a tree', 'napping in the sun'] });
+  sp('donkey', { name: 'American Standard Donkey', sci: 'Equus asinus', emoji: '🫏', cls: 'mammal', iucn: 'LC', biomes: ['temperate', 'savanna'],
+    climate: [10, 105], space: 150, group: [2, 6], life: 30, mature: 3, gestation: 365, interbirth: 500, fert: 1 / 150, care: 0.06, food: 1500,
+    appeal: 2.5, transport: 1500, size: 24, behaviors: ['braying loudly', 'getting a hoof trim', 'dozing'] });
+  sp('arctic_fox', { name: 'Arctic Fox', sci: 'Vulpes lagopus', emoji: '🦊', cls: 'mammal', iucn: 'LC', biomes: ['arctic', 'mountain'], climate: [-50, 72],
+    space: 60, group: [1, 3], life: 10, mature: 1, gestation: 52, litter: [3, 8], interbirth: 365, fert: 1 / 100, care: 0.06, food: 1500, appeal: 5,
+    transport: 3000, size: 18, behaviors: ['curled into a fluffy ball', 'pouncing on a toy', 'digging a den'] });
+  sp('water_monitor', { name: 'Asian Water Monitor', sci: 'Varanus salvator', emoji: '🦎', cls: 'reptile', iucn: 'LC', biomes: ['tropical', 'wetland'],
+    climate: [70, 104], space: 50, group: [1, 2], life: 20, mature: 3, gestation: 220, litter: [5, 15], interbirth: 365, fert: 1 / 200, care: 0.06,
+    food: 1200, appeal: 4, danger: 1, transport: 3000, size: 22, behaviors: ['swimming', 'basking on a log', 'tongue-flicking'] });
+  sp('bactrian_camel', { name: 'Bactrian Camel', sci: 'Camelus bactrianus', emoji: '🐫', cls: 'mammal', iucn: 'CR', biomes: ['savanna', 'mountain', 'temperate'],
+    climate: [-20, 105], space: 400, group: [2, 6], life: 40, mature: 4, gestation: 400, interbirth: 700, fert: 1 / 200, care: 0.15, food: 4500,
+    appeal: 5, danger: 1, transport: 12000, size: 32, behaviors: ['shedding its winter wool', 'chewing cud', 'kneeling to rest'] });
+  sp('ostrich', { name: 'Common Ostrich', sci: 'Struthio camelus', emoji: '🐦', cls: 'bird', iucn: 'LC', biomes: ['savanna'], climate: [30, 110],
+    space: 200, group: [2, 8], life: 40, mature: 3, gestation: 42, litter: [3, 10], interbirth: 365, fert: 1 / 100, care: 0.06, food: 1500, appeal: 4,
+    danger: 2, transport: 4000, size: 28, mix: 'plains', behaviors: ['dust-bathing', 'displaying its wings', 'pecking at the gravel'] });
+  sp('okapi', { name: 'Okapi', sci: 'Okapia johnstoni', emoji: '🦓', cls: 'mammal', iucn: 'EN', program: 'SSP', biomes: ['forest'], climate: [55, 100],
+    space: 300, group: [1, 3], life: 25, mature: 2.5, gestation: 440, interbirth: 600, fert: 1 / 250, care: 0.2, food: 5000, appeal: 7, transport: 25000,
+    size: 28, behaviors: ['browsing leaves with its long tongue', 'licking its own ear', 'hiding in the shade'] });
+  sp('jaguar', { name: 'Jaguar', sci: 'Panthera onca', emoji: '🐆', cls: 'mammal', iucn: 'NT', program: 'SSP', biomes: ['tropical', 'forest'],
+    climate: [50, 104], space: 280, group: [1, 2], life: 20, mature: 3, gestation: 100, litter: [1, 3], interbirth: 600, fert: 1 / 150, care: 0.28,
+    food: 8500, appeal: 8, danger: 3, transport: 14000, size: 28, rejectRisk: 0.12, behaviors: ['swimming in the pool', 'lounging on a log', 'watching the crowd'] });
+
   ZG.BIOMES = {
     savanna: { name: 'African Savanna', ground: '#d9c27e', dark: '#b89a52', deco: ['🌳', '🪨'] },
     forest: { name: 'Rainforest / Forest', ground: '#5f8f4e', dark: '#3f6b35', deco: ['🌳', '🌲', '🌿'] },

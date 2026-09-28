@@ -21,9 +21,10 @@
 
   function render() {
     const steps = [title, identity, education, career, zooPick];
-    root.innerHTML = `<div class="creator">${steps[st.step]()}</div>`;
+    root.innerHTML = `<div class="creator step${st.step}">${steps[st.step]()}</div>`;
     bind();
     if (st.step === 1) drawPreview();
+    if (st.step === 0) fillRoundels();
   }
 
   function stepper() {
@@ -34,8 +35,8 @@
   function title() {
     const has = ZG.App.hasSave();
     return `<div class="title-screen">
-      <div class="logo">🦒🐘🦍</div>
       <h1>Zoo Director</h1>
+      <div class="roundels" id="roundels"></div>
       <p class="tag">Run a real American zoo — the budgets, the politics, the animals, the disasters.</p>
       <div class="big-actions">
         <button class="btn primary big" data-c="next">Start a new career</button>
@@ -65,24 +66,31 @@
           <h4>Outfit</h4>${swatches('outfit', L.outfit, true)}
           <h4>Hat</h4>${swatches('hat', L.hat)}
         </div>
-        <div class="preview"><canvas id="c-prev" width="220" height="260"></canvas><p id="c-prev-name">${esc(st.d.name || 'Your Name')}</p></div>
+        <div class="preview"><div class="prevbox"><img id="c-prev" alt="Your director"></div><p id="c-prev-name">${esc(st.d.name || 'Your Name')}</p></div>
       </div>
       <div class="nav"><button class="btn" data-c="back">Back</button><button class="btn primary" data-c="next" ${st.d.name.trim() ? '' : 'disabled'} id="c-next">Next: Education →</button></div>`;
   }
 
   function drawPreview() {
-    const c = document.getElementById('c-prev');
-    if (!c) return;
-    const ctx = c.getContext('2d');
-    ctx.clearRect(0, 0, c.width, c.height);
-    const g = ctx.createRadialGradient(110, 150, 10, 110, 150, 130);
-    g.addColorStop(0, '#cfe6b8');
-    g.addColorStop(1, '#8fb870');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, c.width, c.height);
-    ZG.Render.emoji(ctx, '🌳', 40, 60, 40);
-    ZG.Render.emoji(ctx, '🦒', 180, 70, 44);
-    ZG.drawAvatar(ctx, 110, 175, 5, st.d.look, 1, 0);
+    const img = document.getElementById('c-prev');
+    if (img) img.src = ZG.Portraits.avatar(st.d.look);
+  }
+
+  const SHOWCASE = ['african_buffalo', 'african_leopard', 'african_elephant', 'african_wild_dog', 'aldabra_tortoise', 'alpaca', 'giraffe', 'alpine_ibex', 'bison', 'black_bear', 'flamingo', 'giant_panda', 'arctic_fox', 'komodo', 'bactrian_camel', 'gorilla', 'amur_tiger', 'grevys_zebra'];
+  function fillRoundels() {
+    const box = document.getElementById('roundels');
+    if (!box) return;
+    let i = 0;
+    const next = () => {
+      if (!document.getElementById('roundels') || i >= SHOWCASE.length) return;
+      const id = SHOWCASE[i++];
+      const d = document.createElement('div');
+      d.className = 'roundel';
+      d.innerHTML = `${ZG.Portraits.img(id, 'portrait lg')}<span class="banner">${ZG.SPECIES[id].name}</span>`;
+      box.appendChild(d);
+      setTimeout(next, 30);
+    };
+    next();
   }
 
   function education() {
