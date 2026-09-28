@@ -473,13 +473,13 @@
   };
   A.sendOut = (s, d) => {
     const a = ZG.Animals.byId(s, +d.aid);
-    if (!a || !confirm(`Transfer ${a.name} to another zoo? This can't be undone.`)) return null;
+    if (!a || !ZG.App.confirm('send' + a.id, `Transfer ${a.name} to another zoo? This can't be undone.`)) return null;
     return ZG.AZA.sendOut(s, +d.aid);
   };
   A.repair = (s, d) => ZG.Infra.startRepair(s, d.sys, +d.to);
   A.renovate = (s, d) => ZG.Habitats.startRenovation(s, +d.hab);
   A.theming = (s, d) => ZG.Habitats.upgradeTheming(s, +d.hab);
-  A.demolish = (s, d) => (confirm('Demolish this habitat?') ? ZG.Habitats.demolish(s, +d.hab) : null);
+  A.demolish = (s, d) => (ZG.App.confirm('demolish' + d.hab, 'Demolish this habitat?') ? ZG.Habitats.demolish(s, +d.hab) : null);
   A.climate = (s, d) => {
     const h = s.habitatsById[+d.hab];
     const Z = ZG.zoo(s);
@@ -532,7 +532,7 @@
     return { ok: true, msg: 'Declined.' };
   };
   A.sponsorDrop = (s, d) => {
-    if (!confirm('End this sponsorship early? You lose the remaining payments.')) return null;
+    if (!ZG.App.confirm('drop' + d.name, 'End this sponsorship early? You lose the remaining payments.')) return null;
     ZG.Dev.dropSponsor(s, d.name);
     return { ok: true, msg: 'Sponsorship ended.' };
   };

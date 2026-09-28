@@ -71,7 +71,7 @@
       App.start(ZG.Sim.deserialize(str));
       toast('Game loaded.');
     } catch (e) {
-      alert('Could not load the save: ' + e.message);
+      toast('Could not load the save: ' + e.message, true);
     }
   };
   App.save = function (quiet) {
@@ -318,6 +318,20 @@
   }
   App.toast = toast;
 
+  // In-page confirmation: the first click warns, a second click within 4 s confirms.
+  // (Browser confirm() dialogs are blocked in embedded viewers.)
+  let pendingConfirm = null;
+  App.confirm = function (key, msg) {
+    const now = Date.now();
+    if (pendingConfirm && pendingConfirm.key === key && now - pendingConfirm.at < 4000) {
+      pendingConfirm = null;
+      return true;
+    }
+    pendingConfirm = { key, at: now };
+    toast(msg + ' Click again to confirm.', true);
+    return false;
+  };
+
   function setWalk(on) {
     ZG.Render.setWalk(s, on);
     if (on && speedIdx > 2) speedIdx = 1;
@@ -350,7 +364,7 @@
         if (a === 'help') openHelp();
         if (a === 'menu') {
           App.save(true);
-          if (confirm('Return to the main menu? Your game is saved.')) {
+          if (App.confirm('menu', 'Return to the main menu? Your game is saved.')) {
             s = null;
             ZG.Render.reset();
             closeWindow();
