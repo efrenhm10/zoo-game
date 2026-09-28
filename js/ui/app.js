@@ -18,6 +18,11 @@
   const el = {};
 
   App.getState = () => s;
+  App.showModal = function (html) {
+    modalOpen = true;
+    el['modal-root'].innerHTML = html;
+  };
+  App.hideModal = () => closeModal();
 
   App.hasSave = () => {
     try {

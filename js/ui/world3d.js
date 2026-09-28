@@ -44,7 +44,7 @@
     r.outputEncoding = T.LinearEncoding; // colors are authored as display colors
     r.toneMapping = T.NoToneMapping;
     st.renderer = r;
-    st.camera = new T.PerspectiveCamera(42, 1, 0.3, 3000);
+    st.camera = new T.PerspectiveCamera(42, 1, 0.5, 7000);
     Mo.buildScenery();
     R.resize();
     window.addEventListener('resize', R.resize);
@@ -84,15 +84,19 @@
     const scene = new T.Scene();
     st.scene = scene;
     const Z = ZG.zoo(s);
-    const sky = new T.Color(s.zooId === 'cheyenne' ? '#9cc6e8' : '#a9d3ef');
+    st.setting = ZG.Settings[s.zooId];
+    const SK = st.setting.sky;
+    st.skyBase = SK;
+    const sky = new T.Color(SK.bottom);
     scene.background = sky;
-    scene.fog = new T.Fog(sky, 380, 1100);
+    scene.fog = new T.Fog(sky, SK.fogNear, SK.fogFar);
     st.skyColor = sky.clone();
+    st.updaters = [];
     // Sky dome gradient
-    const skyGeo = new T.SphereGeometry(1500, 24, 12);
+    const skyGeo = new T.SphereGeometry(5500, 24, 12);
     const skyMat = new T.ShaderMaterial({
       side: T.BackSide, depthWrite: false, fog: false,
-      uniforms: { top: { value: new T.Color('#5b9bd5') }, bottom: { value: new T.Color('#dcecf5') } },
+      uniforms: { top: { value: new T.Color(SK.top) }, bottom: { value: new T.Color(SK.bottom) } },
       vertexShader: 'varying vec3 vP; void main(){ vP = (modelMatrix*vec4(position,1.0)).xyz; gl_Position = projectionMatrix*viewMatrix*vec4(vP,1.0); }',
       fragmentShader: 'uniform vec3 top; uniform vec3 bottom; varying vec3 vP; void main(){ float h = normalize(vP).y; gl_FragColor = vec4(mix(bottom, top, clamp(h*1.8,0.0,1.0)),1.0); }',
     });
@@ -118,7 +122,12 @@
     scene.add(sun.target);
     st.sun = sun;
 
+    st.trafficLanes = [];
+    st.boatSets = [];
+    st.trains = [];
+    st.lifts = [];
     buildTerrain(s, scene, Z);
+    buildMovers(scene);
     buildPaths(s, scene, Z);
     buildEntrance(s, scene, Z);
     buildPeople(scene);
@@ -146,66 +155,91 @@
     scene.add(st.habRoot);
   }
 
-  function terrainHeight(X, Z, s) {
-    const L = s.layout;
-    const [x0, z0] = toW(L.xs[0] - 55, L.ys[0] - 60);
-    const [x1, z1] = toW(L.xs[L.cols] + 55, SH + 10);
-    const dx = Math.max(x0 - X, 0, X - x1), dz = Math.max(z0 - Z, 0, Z - z1);
+  // Flat zoo grounds blended into the real-world setting around them.
+  function zooBlend(X, Z) {
+    const dx = Math.max(-215 - X, 0, X - 215), dz = Math.max(-135 - Z, 0, Z - 175);
     const d = Math.hypot(dx, dz);
-    if (d <= 0) return 0;
-    const t = Math.min(1, d / 40);
-    let h = t * t * (fbm(X * 0.012, Z * 0.012, 3) * 14 - 2);
-    // lakes beyond the zoo, like the island in the reference
-    const lake = fbm(X * 0.004 + 10, Z * 0.004 - 4, 9);
-    const far = Math.min(1, Math.max(0, (d - 70) / 120));
-    h -= far * Math.max(0, lake - 0.35) * 60;
-    return h;
+    const t = Math.min(1, d / 70);
+    return t * t * (3 - 2 * t);
   }
+  function terrainHeight(X, Z) {
+    const b = zooBlend(X, Z);
+    return b > 0 ? b * st.setting.height(X, Z) : 0;
+  }
+  R.terrainHeight = terrainHeight;
 
   function buildTerrain(s, scene, Z) {
-    const size = 1400, seg = 160;
+    const SET = st.setting;
+    const size = 3200, seg = 230;
     const geo = new T.PlaneGeometry(size, size, seg, seg);
     geo.rotateX(-Math.PI / 2);
     const pos = geo.attributes.position;
     const col = new Float32Array(pos.count * 3);
-    const g1 = new T.Color(Z.theme.grass), g2 = new T.Color(Z.theme.grass2), sand = new T.Color('#cbbd8c'), dark = new T.Color('#3f6a33'), c = new T.Color();
+    const g1 = new T.Color(Z.theme.grass), g2 = new T.Color(Z.theme.grass2), c = new T.Color();
     for (let i = 0; i < pos.count; i++) {
       const X = pos.getX(i), Zc = pos.getZ(i);
-      const h = terrainHeight(X, Zc, s);
+      const h = terrainHeight(X, Zc);
       pos.setY(i, h);
-      const n = fbm(X * 0.05, Zc * 0.05, 1);
-      c.copy(g1).lerp(g2, n);
-      if (h > 3) c.lerp(dark, Math.min(0.6, (h - 3) / 10));
-      if (h < -0.6) c.copy(sand);
+      const b = zooBlend(X, Zc);
+      if (b < 1) {
+        c.copy(g1).lerp(g2, fbm(X * 0.05, Zc * 0.05, 1));
+        if (b > 0) {
+          const o = SET.ground(X, Zc, h, new T.Color());
+          c.lerp(o, b);
+        }
+      } else SET.ground(X, Zc, h, c);
       col[i * 3] = c.r;
       col[i * 3 + 1] = c.g;
       col[i * 3 + 2] = c.b;
     }
     geo.setAttribute('color', new T.BufferAttribute(col, 3));
     geo.computeVertexNormals();
-    const ground = new T.Mesh(geo, new T.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: false }));
+    const ground = new T.Mesh(geo, new T.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
     ground.receiveShadow = true;
     scene.add(ground);
-    // Water
-    const water = new T.Mesh(new T.PlaneGeometry(3000, 3000), new T.MeshStandardMaterial({ color: Z.theme.water, roughness: 0.18, metalness: 0.15, transparent: true, opacity: 0.92 }));
-    water.rotation.x = -Math.PI / 2;
-    water.position.y = -1.6;
-    scene.add(water);
-    // Forest outside the perimeter & trees along paths
+    // Oceans & lakes
+    if (SET.water) {
+      const water = new T.Mesh(new T.PlaneGeometry(12000, 12000), new T.MeshStandardMaterial({ color: SET.water.color, roughness: 0.15, metalness: 0.2, transparent: true, opacity: 0.93 }));
+      water.rotation.x = -Math.PI / 2;
+      water.position.y = SET.water.level;
+      scene.add(water);
+      st.waterMesh = water;
+    }
+    for (const wb of SET.waterBodies || []) {
+      let m;
+      const wm = new T.MeshStandardMaterial({ color: wb.color, roughness: 0.12, metalness: 0.2, transparent: true, opacity: 0.92 });
+      if (wb.type === 'ellipse') {
+        m = new T.Mesh(new T.CircleGeometry(1, 40), wm);
+        m.scale.set(wb.rx, wb.rz, 1);
+        m.position.set(wb.x, wb.y, wb.z);
+      } else {
+        m = new T.Mesh(new T.PlaneGeometry(wb.x1 - wb.x0, wb.z1 - wb.z0), wm);
+        m.position.set((wb.x0 + wb.x1) / 2, wb.y, (wb.z0 + wb.z1) / 2);
+      }
+      m.rotation.x = -Math.PI / 2;
+      m.receiveShadow = true;
+      scene.add(m);
+    }
+    // Real-world surroundings
+    const ctx = settingCtx(s, scene);
+    SET.build(ctx);
+    ctx.restore();
+    // Scenery trees around the zoo, per the setting
     const L = s.layout;
     const r0 = fbmSeed(s.seed);
     const kinds = treeKinds(s.zooId);
     const places = {};
-    kinds.forEach((k) => (places[k] = []));
-    for (let i = 0; i < 4200; i++) {
-      const X = (r0() - 0.5) * 1300, Zc = (r0() - 0.5) * 1300;
-      const h = terrainHeight(X, Zc, s);
-      if (h < -0.4) continue;
-      const [sx, sy] = toS(X, Zc);
-      const inside = sx > L.xs[0] - 50 && sx < L.xs[L.cols] + 50 && sy > L.ys[0] - 55 && sy < SH + 5;
-      if (inside) continue;
-      if (fbm(X * 0.01, Zc * 0.01, 21) < 0.42 && r0() < 0.7) continue;
-      places[kinds[Math.floor(r0() * kinds.length)]].push([X, h, Zc, 0.8 + r0() * 0.7, 'far']);
+    const put = (k, v) => (places[k] = places[k] || []).push(v);
+    for (let i = 0; i < 11000; i++) {
+      const X = (r0() - 0.5) * 3000, Zc = (r0() - 0.5) * 3000;
+      if (zooBlend(X, Zc) < 0.2) continue;
+      if (Zc > 125 && Zc < 175 && Math.abs(X) < 70) continue;
+      const h = terrainHeight(X, Zc);
+      const k = SET.tree(X, Zc, h, r0);
+      if (!k || !Mo.scenery[k]) continue;
+      if (ctx.onRoad(X, Zc)) continue;
+      const far = Math.hypot(X, Zc) > 420;
+      put(far ? k + '|far' : k, [X, h, Zc, 0.8 + r0() * 0.6]);
     }
     // Trees between plots inside the zoo
     for (let i = 0; i < 700; i++) {
@@ -214,14 +248,13 @@
       if (L.xs.some((px) => Math.abs(px - sx) < L.P / 2 + 8) || L.ys.some((py) => Math.abs(py - sy) < L.P / 2 + 8)) continue;
       if (sy > L.ys[L.rows] && Math.abs(sx - L.entrance.x) < 170) continue;
       const [X, Zc] = toW(sx, sy);
-      places[kinds[Math.floor(r0() * kinds.length)]].push([X, 0, Zc, 0.6 + r0() * 0.5]);
+      put(kinds[Math.floor(r0() * kinds.length)], [X, 0, Zc, 0.6 + r0() * 0.5]);
     }
-    for (const k of kinds) {
-      const far = places[k].filter((p) => p[4] === 'far');
-      const near = places[k].filter((p) => p[4] !== 'far');
-      addInstances(scene, Mo.scenery[k], near, true);
-      const im = addInstances(scene, k === 'deciduous' ? Mo.scenery.deciduousLow : Mo.scenery[k], far.map((p) => [p[0], p[1], p[2], p[3]]), true);
-      if (im) im.castShadow = false;
+    for (const key in places) {
+      const [k, far] = key.split('|');
+      const geo = far && k === 'deciduous' ? Mo.scenery.deciduousLow : Mo.scenery[k];
+      const im = addInstances(scene, geo, places[key], true);
+      if (im && far) im.castShadow = false;
     }
     // Perimeter fence
     const [fx0, fz0] = toW(L.xs[0] - 50, L.ys[0] - 55);
@@ -268,12 +301,189 @@
   }
   function treeKinds(zooId) {
     return {
-      honolulu: ['palm', 'palm', 'deciduous', 'bush'],
-      sandiego: ['palm', 'deciduous', 'acacia', 'bush'],
-      national: ['deciduous', 'deciduous', 'conifer', 'bush'],
-      houston: ['deciduous', 'deciduous', 'conifer', 'bush'],
+      honolulu: ['palm', 'palm', 'banyan', 'bush'],
+      sandiego: ['palm', 'eucalyptus', 'jacaranda', 'bush'],
+      national: ['oak', 'deciduous', 'autumn', 'bush'],
+      houston: ['oak', 'oak', 'conifer', 'bush'],
       cheyenne: ['conifer', 'conifer', 'conifer', 'deciduous', 'rock'],
     }[zooId] || ['deciduous', 'conifer'];
+  }
+
+  // ---------------------------------------------------------------------
+  // Setting context: helpers the per-zoo settings use to add traffic etc.
+  // ---------------------------------------------------------------------
+  function settingCtx(s, scene) {
+    const roadsList = [];
+    const ctx = {
+      scene, s, h: terrainHeight,
+      instances: (geo, list, randRot, mat, noShadow) => {
+        const im = addInstances(scene, geo, list.map((p) => [p[0], terrainHeight(p[0], p[2]), p[2], p[3]]), randRot, mat);
+        if (im && noShadow) im.castShadow = false;
+        return im;
+      },
+      onRoad: (X, Z) => roadsList.some((r) => r.near(X, Z)),
+      traffic: (pts, n, w, speed) => {
+        const path = ZG.Settings.kit.densify(pts, 6).map(([x, z]) => [x, terrainHeight(x, z) + 0.15, z]);
+        const cum = [0];
+        for (let i = 1; i < path.length; i++) cum.push(cum[i - 1] + Math.hypot(path[i][0] - path[i - 1][0], path[i][2] - path[i - 1][2]));
+        const len = cum[cum.length - 1];
+        const cars = [];
+        for (let i = 0; i < n; i++) cars.push({ d: Math.random() * len, lane: i % 2, v: (speed || 13) * (0.8 + Math.random() * 0.4), col: ['#c0392b', '#2c3e50', '#ecf0f1', '#7f8c8d', '#2980b9', '#16a085', '#f1c40f', '#111', '#e67e22', '#bdc3c7'][i % 10], bus: Math.random() < 0.08 });
+        st.trafficLanes.push({ path, cum, len, cars, w });
+      },
+      boats: (n, place, kind) => st.boatSets.push({ kind, list: Array.from({ length: n }, (_, i) => ({ p: place(Math.random), a: Math.random() * 6.28, sp: 0.02 + Math.random() * 0.05, r: 20 + Math.random() * 40 })) }),
+      train: (pts, c1, c2) => {
+        const path = ZG.Settings.kit.densify(pts, 10).map(([x, z]) => [x, terrainHeight(x, z) + 0.2, z]);
+        const len = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]);
+        st.trains.push({ path, len, d: len * 0.3, dir: 1, color: c2 });
+        ZG.Settings.kit.roads(ctx, [{ pts, w: 5 }]);
+      },
+      river: (pts, w, color) => {
+        const posA = [];
+        const dp = ZG.Settings.kit.densify(pts, 10);
+        for (let i = 0; i < dp.length - 1; i++) {
+          const [ax, az] = dp[i], [bx, bz] = dp[i + 1];
+          const len = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / len, nz = (bx - ax) / len;
+          const ya = terrainHeight(ax, az) + 0.8, yb = terrainHeight(bx, bz) + 0.8;
+          posA.push(ax + nx * w, ya, az + nz * w, bx - nx * w, yb, bz - nz * w, bx + nx * w, yb, bz + nz * w);
+          posA.push(ax + nx * w, ya, az + nz * w, ax - nx * w, ya, az - nz * w, bx - nx * w, yb, bz - nz * w);
+        }
+        const g = new T.BufferGeometry();
+        g.setAttribute('position', new T.Float32BufferAttribute(posA, 3));
+        g.computeVertexNormals();
+        scene.add(new T.Mesh(g, new T.MeshStandardMaterial({ color, roughness: 0.15, metalness: 0.2, side: T.DoubleSide })));
+      },
+      chairlift: (a, b) => {
+        const ya = terrainHeight(a[0], a[1]) + 9, yb = terrainHeight(b[0], b[1]) + 9;
+        const A = new T.Vector3(a[0], ya, a[1]), B = new T.Vector3(b[0], yb, b[1]);
+        const side = new T.Vector3(b[1] - a[1], 0, -(b[0] - a[0])).normalize().multiplyScalar(2);
+        const lines = [A.clone().add(side), B.clone().add(side), A.clone().sub(side), B.clone().sub(side)];
+        const lg = new T.BufferGeometry().setFromPoints(lines);
+        scene.add(new T.LineSegments(lg, new T.LineBasicMaterial({ color: '#222' })));
+        const g = new T.Group();
+        for (let i = 0; i <= 6; i++) {
+          const P = A.clone().lerp(B, i / 6);
+          const gh = terrainHeight(P.x, P.z);
+          g.add(Mo.mesh(Mo.G.cyl, Mo.mat('#6d6d6d'), [P.x, (gh + P.y) / 2, P.z], [0.35, P.y - gh + 0.5, 0.35]));
+          g.add(Mo.mesh(Mo.G.box, Mo.mat('#6d6d6d'), [P.x, P.y, P.z], [0.4, 0.4, 5], [0, Math.atan2(side.x, side.z), 0]));
+        }
+        scene.add(g);
+        st.lifts.push({ A, B, side, t: 0, n: 16 });
+      },
+    };
+    // record roads so trees avoid them
+    const origRoads = ZG.Settings.kit.roads;
+    ctx.scene = scene;
+    ZG.Settings.kit.roads = function (c, roads) {
+      for (const rd of roads) {
+        const dp = ZG.Settings.kit.densify(rd.pts, 20);
+        const w = (rd.w || 14) / 2 + 4;
+        roadsList.push({ near: (X, Z) => dp.some(([x, z]) => Math.abs(x - X) < w + 10 && Math.abs(z - Z) < w + 10) });
+      }
+      return origRoads(c, roads);
+    };
+    ctx.restore = () => (ZG.Settings.kit.roads = origRoads);
+    return ctx;
+  }
+
+  const _mv = new T.Matrix4(), _qv = new T.Quaternion(), _ev = new T.Euler(), _pv = new T.Vector3(), _sv = new T.Vector3(1, 1, 1), _cv = new T.Color();
+  function buildMovers(scene) {
+    const n = st.trafficLanes.reduce((a, l) => a + l.cars.length, 0);
+    if (n) {
+      st.carMesh = new T.InstancedMesh(Mo.scenery.car, new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, flatShading: true }), n);
+      st.busMesh = new T.InstancedMesh(Mo.scenery.bus, new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, flatShading: true }), n);
+      for (const m of [st.carMesh, st.busMesh]) {
+        m.instanceMatrix.setUsage(T.DynamicDrawUsage);
+        m.castShadow = true;
+        m.frustumCulled = false;
+        scene.add(m);
+      }
+    }
+    for (const b of st.boatSets) {
+      b.mesh = new T.InstancedMesh(Mo.scenery[b.kind], new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, flatShading: true }), b.list.length);
+      b.mesh.frustumCulled = false;
+      b.mesh.castShadow = true;
+      if (b.kind === 'pedal') b.list.forEach((x, i) => b.mesh.setColorAt(i, _cv.set(['#ffffff', '#f4c542', '#e8563a', '#4aa3df'][i % 4])));
+      scene.add(b.mesh);
+    }
+    for (const tr of st.trains) {
+      tr.mesh = new T.Mesh(Mo.scenery.tram, new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.4, flatShading: true }));
+      tr.mesh.castShadow = true;
+      scene.add(tr.mesh);
+      tr.stripe = Mo.mesh(Mo.G.box, Mo.mat(tr.color), [0, 0.9, 0], [2.7, 0.5, 28.2]);
+      tr.mesh.add(tr.stripe);
+    }
+    for (const l of st.lifts) {
+      l.mesh = new T.InstancedMesh(Mo.scenery.chair, new T.MeshStandardMaterial({ vertexColors: true, flatShading: true }), l.n);
+      l.mesh.frustumCulled = false;
+      scene.add(l.mesh);
+    }
+  }
+  function updateMovers(dt) {
+    if (st.carMesh) {
+      let ci = 0, bi = 0;
+      for (const lane of st.trafficLanes) {
+        for (const c of lane.cars) {
+          c.d = (c.d + c.v * dt) % lane.len;
+          const d = c.lane ? lane.len - c.d : c.d;
+          let i = 1;
+          while (i < lane.cum.length - 1 && lane.cum[i] < d) i++;
+          const a = lane.path[i - 1], b = lane.path[i];
+          const f = (d - lane.cum[i - 1]) / Math.max(0.001, lane.cum[i] - lane.cum[i - 1]);
+          const dx = b[0] - a[0], dz = b[2] - a[2], len = Math.hypot(dx, dz) || 1;
+          const off = (lane.w / 4) * (c.lane ? -1 : 1);
+          _pv.set(a[0] + dx * f - (dz / len) * off, a[1] + (b[1] - a[1]) * f, a[2] + dz * f + (dx / len) * off);
+          _ev.set(0, Math.atan2(dx, dz) + (c.lane ? Math.PI : 0), 0);
+          _qv.setFromEuler(_ev);
+          _mv.compose(_pv, _qv, _sv);
+          const m = c.bus ? st.busMesh : st.carMesh;
+          const idx = c.bus ? bi++ : ci++;
+          m.setMatrixAt(idx, _mv);
+          m.setColorAt(idx, _cv.set(c.bus ? '#f2f2f2' : c.col));
+        }
+      }
+      st.carMesh.count = ci;
+      st.busMesh.count = bi;
+      for (const m of [st.carMesh, st.busMesh]) {
+        m.instanceMatrix.needsUpdate = true;
+        if (m.instanceColor) m.instanceColor.needsUpdate = true;
+      }
+    }
+    for (const b of st.boatSets) {
+      b.list.forEach((x, i) => {
+        x.a += x.sp * dt;
+        const X = x.p[0] + Math.cos(x.a) * x.r, Z = x.p[1] + Math.sin(x.a) * x.r;
+        const y = (b.kind === 'pedal' ? -0.5 : (st.setting.water ? st.setting.water.level : 0)) + Math.sin(st.time * 1.5 + i) * 0.15;
+        _pv.set(X, y, Z);
+        _ev.set(Math.sin(st.time + i) * 0.04, -x.a, 0);
+        _qv.setFromEuler(_ev);
+        _mv.compose(_pv, _qv, _sv);
+        b.mesh.setMatrixAt(i, _mv);
+      });
+      b.mesh.instanceMatrix.needsUpdate = true;
+    }
+    for (const tr of st.trains) {
+      tr.d += tr.dir * 11 * dt;
+      if (tr.d > tr.len - 20 || tr.d < 20) tr.dir *= -1;
+      const a = tr.path[0], b = tr.path[tr.path.length - 1];
+      const f = tr.d / tr.len;
+      tr.mesh.position.set(a[0] + (b[0] - a[0]) * f, 0.2 + terrainHeight(a[0] + (b[0] - a[0]) * f, a[2] + (b[2] - a[2]) * f), a[2] + (b[2] - a[2]) * f);
+      tr.mesh.rotation.y = Math.atan2(b[0] - a[0], b[2] - a[2]);
+    }
+    for (const l of st.lifts) {
+      l.t = (l.t + dt * 0.012) % 1;
+      for (let i = 0; i < l.n; i++) {
+        let u = (l.t + i / l.n) % 1;
+        const up = u < 0.5;
+        const f = up ? u * 2 : 2 - u * 2;
+        _pv.copy(l.A).lerp(l.B, f).add(up ? l.side : l.side.clone().negate());
+        _ev.set(0, Math.atan2(l.B.x - l.A.x, l.B.z - l.A.z) + (up ? 0 : Math.PI), 0);
+        _qv.setFromEuler(_ev);
+        _mv.compose(_pv, _qv, _sv);
+        l.mesh.setMatrixAt(i, _mv);
+      }
+      l.mesh.instanceMatrix.needsUpdate = true;
+    }
   }
   function addInstances(parent, geo, list, randRot, mat) {
     if (!list.length) return null;
@@ -497,7 +707,8 @@
   }
   function pondFor(h, p) {
     const r = fbmSeed(h.seed);
-    const water = ['aquatic', 'wetland', 'arctic'].includes(h.biome) ? 0.34 : 0.15;
+    const big = h.features && (h.features.includes('bigPool') || h.features.includes('underwaterView'));
+    const water = ['aquatic', 'wetland', 'arctic'].includes(h.biome) ? 0.34 : big ? 0.27 : 0.15;
     return { x: p.x + p.w * (0.3 + r() * 0.4), y: p.y + p.h * (0.35 + r() * 0.3), rx: p.w * water, ry: p.h * water * 0.75, rot: r() * 0.8 };
   }
   function inPond(pd, x, y, pad) {
@@ -523,7 +734,7 @@
   R._habHeight = habHeight;
 
   function habitatKey(h) {
-    return `${h.biome}|${h.construction ? 'c' : ''}${h.renovation ? 'r' : ''}|${Math.round(h.condition / 10)}|${Math.round(h.theming / 15)}|${h.climate}|${h.sponsor || ''}`;
+    return `${h.biome}|${h.construction ? 'c' : ''}${h.renovation ? 'r' : ''}|${Math.round(h.condition / 10)}|${Math.round(h.theming / 15)}|${h.climate}|${h.sponsor || ''}|${(h.features || []).join(',')}`;
   }
 
   function buildHabitat(s, p, h) {
@@ -642,6 +853,7 @@
       net.castShadow = false;
       g.add(net);
     }
+    buildFeatures(g, s, p, h, pd, { cx, cz, w, d, x0, x1, z0, z1 });
     // viewing boardwalk on the path side (south edge)
     const bw = Mo.mesh(Mo.G.box, Mo.mat('#9a7048'), [cx, 0.25, z1 + 1.8], [8, 0.3, 2.5]);
     bw.receiveShadow = true;
@@ -655,6 +867,192 @@
       addInstances(g, Mo.scenery.rock, [[cx - 4, 0, cz, 1.5], [cx + 3, 0, cz + 2, 1.2]], true);
     }
     return g;
+  }
+
+  // Architect-designed features rendered inside a habitat
+  function buildFeatures(g, s, p, h, pd, b) {
+    const F = h.features || [];
+    if (!F.length) return;
+    const has = (f) => F.includes(f);
+    const r = fbmSeed(h.seed + 77);
+    const [px, pz] = toW(pd.x, pd.y);
+    const prx = pd.rx * K, prz = pd.ry * K;
+    const gy = (X, Zc) => {
+      const [sx, sy] = toS(X, Zc);
+      return habHeight(h, p, sx, sy);
+    };
+    const freeSpot = (pad) => {
+      for (let i = 0; i < 20; i++) {
+        const X = b.x0 + 5 + r() * (b.w - 10), Zc = b.z0 + 5 + r() * (b.d - 12);
+        const [sx, sy] = toS(X, Zc);
+        if (!inPond(pd, sx, sy, (pad || 4) / K)) return [X, Zc];
+      }
+      return [b.cx, b.cz];
+    };
+    const wood = Mo.mat('#8a5a32'), dark = Mo.mat('#5a3a1f');
+    if (has('waterfall') || has('mist')) {
+      const wx = px, wz = pz - prz * 0.9;
+      addInstances(g, Mo.scenery.bigRock, [[wx - 2.5, 0, wz - 1.5, 1.7, 0, 1.8], [wx + 2.8, 0, wz - 1, 1.4, 0, 1.5], [wx, 0, wz - 3, 2.1, 0, 2.2]], true);
+      if (has('waterfall')) {
+        const fall = Mo.mesh(new T.PlaneGeometry(3.2, 6.5), Mo.mat('#d4eef8', { opacity: 0.8, rough: 0.1, double: true }), [wx, 3.4, wz - 0.4]);
+        fall.castShadow = false;
+        g.add(fall);
+        g.add(Mo.mesh(Mo.G.sphere, Mo.mat('#ffffff', { opacity: 0.7 }), [wx, 0.35, wz + 0.4], [2.2, 0.35, 1.2]));
+      }
+      if (has('mist'))
+        for (let i = 0; i < 6; i++) {
+          const m = Mo.mesh(Mo.G.sphere, Mo.mat('#f4fbff', { opacity: 0.12, smooth: true }), [wx + (r() - 0.5) * 12, 1.2 + r() * 1.5, wz + 2 + r() * 8], [2.5 + r() * 2, 0.7, 2.5 + r() * 2]);
+          m.material.depthWrite = false;
+          m.castShadow = false;
+          g.add(m);
+        }
+    }
+    if (has('beach')) {
+      const sand = Mo.mesh(new T.CircleGeometry(1, 28), Mo.mat('#e8d9ac'), [px, 0.16, pz], [prx + 4, prz + 3, 1], [-Math.PI / 2, 0, -pd.rot]);
+      sand.receiveShadow = true;
+      g.add(sand);
+    }
+    if (has('underwaterView')) {
+      const len = prx * 1.6;
+      const tube = Mo.mesh(new T.CylinderGeometry(2.2, 2.2, len, 16, 1, true, 0, Math.PI), Mo.mat('#bfe8f5', { opacity: 0.45, rough: 0.05, double: true }), [px, 0.2, pz + prz * 0.3], null, [0, 0, Math.PI / 2]);
+      tube.rotation.set(0, 0, Math.PI / 2);
+      tube.castShadow = false;
+      g.add(tube);
+      const pav = building(6, 3.4, 4, '#dfe8ec', '#3f6f8f', 1.4);
+      pav.position.set(px - len / 2 - 2, 0, pz + prz * 0.3);
+      g.add(pav);
+    }
+    if (has('stream')) {
+      const pts = [];
+      let X = b.x0 + 4 + r() * (b.w * 0.3), Zc = b.z0 + 3;
+      for (let i = 0; i < 14; i++) {
+        pts.push([X, Zc]);
+        X += (px - X) * 0.15 + (r() - 0.5) * 3;
+        Zc += (pz - Zc) * 0.15 + 1.5;
+      }
+      for (let i = 0; i < pts.length - 1; i++) {
+        const [ax, az] = pts[i], [bx, bz] = pts[i + 1];
+        const len = Math.hypot(bx - ax, bz - az);
+        const seg = Mo.mesh(Mo.G.box, Mo.mat('#5fa8c9', { rough: 0.1 }), [(ax + bx) / 2, gy((ax + bx) / 2, (az + bz) / 2) + 0.18, (az + bz) / 2], [1.8, 0.05, len + 0.6], [0, Math.atan2(bx - ax, bz - az), 0]);
+        seg.castShadow = false;
+        g.add(seg);
+      }
+    }
+    if (has('rockwork')) {
+      const rocks = [];
+      for (let i = 0; i < 7; i++) rocks.push([b.x0 + 4 + (i / 6) * (b.w - 8), 0, b.z0 + 3 + r() * 3, 1.1 + r() * 0.9, 0, 1 + r()]);
+      for (let i = 0; i < 3; i++) {
+        const [X, Zc] = freeSpot(6);
+        rocks.push([X, gy(X, Zc), Zc, 0.9 + r() * 0.6]);
+      }
+      addInstances(g, Mo.scenery.bigRock, rocks, true);
+    }
+    if (has('climbing')) {
+      const towers = [];
+      for (let i = 0; i < 3; i++) towers.push(freeSpot(5));
+      towers.forEach(([X, Zc], i) => {
+        const y0 = gy(X, Zc), hgt = 5 + i;
+        for (const [ox, oz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) g.add(Mo.mesh(Mo.G.cyl, wood, [X + ox, y0 + hgt / 2, Zc + oz], [0.18, hgt, 0.18]));
+        g.add(Mo.mesh(Mo.G.box, dark, [X, y0 + hgt, Zc], [2.8, 0.25, 2.8]));
+        g.add(Mo.mesh(Mo.G.box, Mo.mat('#d9822b'), [X, y0 + hgt * 0.55, Zc], [2.2, 0.1, 1.4]));
+      });
+      for (let i = 0; i < towers.length - 1; i++) {
+        const [ax, az] = towers[i], [bx, bz] = towers[i + 1];
+        const ay = gy(ax, az) + 5 + i, by = gy(bx, bz) + 6 + i;
+        const len = Math.hypot(bx - ax, bz - az, by - ay);
+        const rope = Mo.mesh(Mo.G.cyl, Mo.mat('#c9b48a'), [(ax + bx) / 2, (ay + by) / 2 - 0.5, (az + bz) / 2], [0.06, len, 0.06]);
+        rope.lookAt(bx, by - 0.5, bz);
+        rope.rotateX(Math.PI / 2);
+        g.add(rope);
+      }
+    }
+    if (has('cave')) {
+      const [X, Zc] = [b.x1 - 7, b.z0 + 6];
+      addInstances(g, Mo.scenery.bigRock, [[X - 2.6, 0, Zc, 1.4, 0, 1.6], [X + 2.6, 0, Zc, 1.4, 0, 1.6], [X, 3.2, Zc - 0.4, 1.5, 0, 0.8]], false);
+      g.add(Mo.mesh(Mo.G.sphere, Mo.mat('#1c1a17'), [X, 1.2, Zc + 1], [1.6, 1.3, 0.4]));
+    }
+    if (has('mudWallow')) {
+      const [X, Zc] = freeSpot(6);
+      const mud = Mo.mesh(new T.CircleGeometry(1, 20), Mo.mat('#5e4a33', { rough: 0.3 }), [X, gy(X, Zc) + 0.14, Zc], [5, 3.5, 1], [-Math.PI / 2, 0, r()]);
+      mud.receiveShadow = true;
+      g.add(mud);
+    }
+    if (has('bamboo') || has('lush')) {
+      const list = [], lush = [];
+      const kinds = h.biome === 'tropical' ? ['palm', 'bush'] : h.biome === 'savanna' ? ['acacia', 'bush'] : ['deciduous', 'bush'];
+      for (let i = 0; i < (has('lush') ? 18 : 0); i++) {
+        const [X, Zc] = freeSpot(5);
+        lush.push([X, gy(X, Zc), Zc, 0.6 + r() * 0.6, kinds[i % 2]]);
+      }
+      for (let i = 0; i < (has('bamboo') ? 7 : 0); i++) {
+        const [X, Zc] = freeSpot(5);
+        list.push([X, gy(X, Zc), Zc, 0.8 + r() * 0.4]);
+      }
+      addInstances(g, Mo.scenery.bamboo, list, true);
+      for (const k of kinds) addInstances(g, Mo.scenery[k], lush.filter((x) => x[4] === k), true);
+    }
+    if (has('skywalk')) {
+      const X = b.cx + b.w * 0.28;
+      const segs = Math.floor((b.d - 4) / 5);
+      for (let i = 0; i <= segs; i++) {
+        const Zc = b.z1 - 1 - i * 5;
+        g.add(Mo.mesh(Mo.G.cyl, dark, [X - 1.2, 2.6, Zc], [0.15, 5.2, 0.15]));
+        g.add(Mo.mesh(Mo.G.cyl, dark, [X + 1.2, 2.6, Zc], [0.15, 5.2, 0.15]));
+      }
+      g.add(Mo.mesh(Mo.G.box, wood, [X, 5.2, b.cz], [3, 0.3, b.d - 2]));
+      g.add(Mo.mesh(Mo.G.box, dark, [X - 1.45, 6, b.cz], [0.1, 1.1, b.d - 2]));
+      g.add(Mo.mesh(Mo.G.box, dark, [X + 1.45, 6, b.cz], [0.1, 1.1, b.d - 2]));
+    }
+    if (has('feedingDeck')) {
+      const X = b.cx - b.w * 0.25, Zc = b.z1 - 2.5;
+      g.add(Mo.mesh(Mo.G.box, wood, [X, 3.2, Zc], [8, 0.3, 4]));
+      for (const [ox, oz] of [[-3.8, -1.8], [3.8, -1.8], [-3.8, 1.8], [3.8, 1.8]]) g.add(Mo.mesh(Mo.G.cyl, dark, [X + ox, 1.6, Zc + oz], [0.15, 3.2, 0.15]));
+      g.add(Mo.mesh(Mo.G.box, Mo.mat('#e9dcc0'), [X, 6, Zc], [8.6, 0.15, 4.6]));
+      for (const ox of [-3.8, 3.8]) g.add(Mo.mesh(Mo.G.cyl, dark, [X + ox, 4.6, Zc], [0.1, 2.8, 0.1]));
+    }
+    if (has('amphitheater')) {
+      const X = b.cx + b.w * 0.02, Zc = b.z1 - 3;
+      for (let row = 0; row < 3; row++)
+        for (let k = -3; k <= 3; k++) {
+          const a = k * 0.28;
+          const rad = 5 + row * 1.6;
+          g.add(Mo.mesh(Mo.G.box, Mo.mat('#b9ab92'), [X + Math.sin(a) * rad, 0.25 + row * 0.4, Zc + Math.cos(a) * rad * 0.35], [1.7, 0.45 + row * 0.8, 1], [0, a, 0]));
+        }
+    }
+    if (has('aviary') && !s.animals.some((a) => a.hab === h.id && a.sp === 'california_condor')) {
+      const net = Mo.mesh(new T.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), new T.MeshBasicMaterial({ color: '#dfe6ea', wireframe: true, transparent: true, opacity: 0.35 }), [b.cx, 0, b.cz], [b.w / 2, 14, b.d / 2]);
+      net.castShadow = false;
+      g.add(net);
+    }
+    if (has('shade'))
+      for (let i = 0; i < 3; i++) {
+        const X = b.x0 + 6 + i * (b.w / 3.2), Zc = b.z1 - 5;
+        const tri = new T.BufferGeometry().setFromPoints([new T.Vector3(-3, 4.2, -2), new T.Vector3(3, 3.6, -2), new T.Vector3(0, 4, 3)]);
+        tri.computeVertexNormals();
+        g.add(Mo.mesh(tri, Mo.mat(['#f2ead8', '#5fb3b3', '#e9a23b'][i], { double: true }), [X, 0, Zc]));
+        g.add(Mo.mesh(Mo.G.cyl, Mo.mat('#666'), [X - 3, 2.1, Zc - 2], [0.08, 4.2, 0.08]));
+      }
+    if (has('solar'))
+      for (let i = 0; i < 4; i++) g.add(Mo.mesh(Mo.G.box, Mo.mat('#1f3552', { rough: 0.2, metal: 0.4 }), [b.x0 + 2.6 + i * 1.3, 4.3, b.z0 + 3.5], [1.2, 0.05, 3], [0.35, 0, 0]));
+    if (has('ruins')) {
+      const stone = Mo.mat('#b8a88a');
+      for (let i = 0; i < 5; i++) {
+        const [X, Zc] = freeSpot(5);
+        const hh = 1.5 + r() * 3.5;
+        g.add(Mo.mesh(Mo.G.cyl, stone, [X, gy(X, Zc) + hh / 2, Zc], [0.55, hh, 0.55]));
+      }
+      const [X, Zc] = freeSpot(6);
+      const y0 = gy(X, Zc);
+      g.add(Mo.mesh(Mo.G.box, stone, [X - 2, y0 + 2, Zc], [1, 4, 1.2]));
+      g.add(Mo.mesh(Mo.G.box, stone, [X + 2, y0 + 2, Zc], [1, 4, 1.2]));
+      g.add(Mo.mesh(Mo.G.box, stone, [X, y0 + 4.3, Zc], [5.4, 0.8, 1.4]));
+    }
+    if (has('playground')) {
+      const X = b.x1 - 6, Zc = b.z1 - 4;
+      g.add(Mo.mesh(Mo.G.box, Mo.mat('#e74c3c'), [X, 1.2, Zc], [1.4, 2.4, 1.4]));
+      g.add(Mo.mesh(Mo.G.box, Mo.mat('#f1c40f'), [X + 1.8, 0.9, Zc], [0.9, 0.12, 3.6], [0.5, Math.PI / 2, 0]));
+      g.add(Mo.mesh(new T.SphereGeometry(1.2, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), new T.MeshBasicMaterial({ color: '#3498db', wireframe: true }), [X - 2.5, 0, Zc]));
+    }
   }
 
   function buildConstruction(p, h, g) {
@@ -1199,9 +1597,9 @@
     } else {
       const c = st.cam;
       c.pitch = U.clamp(c.pitch, 0.25, 1.45);
-      c.dist = U.clamp(c.dist, 18, 520);
-      c.tx = U.clamp(c.tx, -260, 260);
-      c.tz = U.clamp(c.tz, -200, 220);
+      c.dist = U.clamp(c.dist, 18, 1400);
+      c.tx = U.clamp(c.tx, -900, 900);
+      c.tz = U.clamp(c.tz, -900, 900);
       const want = new T.Vector3(c.tx + Math.sin(c.yaw) * Math.cos(c.pitch) * c.dist, Math.sin(c.pitch) * c.dist, c.tz + Math.cos(c.yaw) * Math.cos(c.pitch) * c.dist);
       cam.position.lerp(want, Math.min(1, dt * 10));
       cam.lookAt(c.tx, 0, c.tz);
@@ -1422,7 +1820,7 @@
       }
       st.snow.geometry.attributes.position.needsUpdate = true;
     }
-    const target = { sun: 0.95, hemi: 0.62, fog: st.skyColor, top: '#5b9bd5', bottom: '#dcecf5' };
+    const target = { sun: 0.95, hemi: 0.62, fog: st.skyColor, top: st.skyBase.top, bottom: st.skyBase.bottom };
     if (rainy) Object.assign(target, { sun: w === 'storm' ? 0.25 : 0.45, hemi: 0.5, top: '#6f7f8e', bottom: '#b7c2cc' });
     if (w === 'snow') Object.assign(target, { sun: 0.55, hemi: 0.7, top: '#b9c6d2', bottom: '#eef2f5' });
     if (w === 'cloudy') Object.assign(target, { sun: 0.65, hemi: 0.66, top: '#8fb0cc', bottom: '#e0e8ee' });
@@ -1434,8 +1832,8 @@
     st.skyMat.uniforms.top.value.lerp(_c.set(target.top), k);
     st.skyMat.uniforms.bottom.value.lerp(_c.set(target.bottom), k);
     st.scene.fog.color.copy(st.skyMat.uniforms.bottom.value);
-    st.scene.fog.near = w === 'smoke' ? 60 : rainy ? 200 : 380;
-    st.scene.fog.far = w === 'smoke' ? 400 : rainy ? 800 : 1100;
+    st.scene.fog.near = w === 'smoke' ? 60 : rainy ? 250 : st.skyBase.fogNear;
+    st.scene.fog.far = w === 'smoke' ? 500 : rainy ? 1400 : st.skyBase.fogFar;
     // shadow camera follows focus when walking for crisper shadows
     const f = st.walk && st.avatar.model ? st.avatar.model.root.position : new T.Vector3(0, 0, 10);
     st.sun.position.set(f.x - 160, 260, f.z + 120);
@@ -1473,6 +1871,7 @@
     drawPeople();
     if (st.walk) updateAvatar(s, dt);
     if (st.cranes) for (const c of st.cranes) c.rotation.y += dt * 0.15;
+    updateMovers(dt);
     if (s._fx && s._fx.length) {
       for (const f of s._fx) {
         const h = s.habitatsById[f.hab];
@@ -1544,6 +1943,91 @@
     shape.holes.push(hole);
     return new T.ShapeGeometry(shape);
   }
+
+  // ---------------------------------------------------------------------
+  // Architect renderings: render a proposed design for a plot offscreen
+  // ---------------------------------------------------------------------
+  let prv = null;
+  R.renderDesign = function (s, concept, w, h) {
+    if (!prv) {
+      prv = new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+      prv.outputEncoding = T.LinearEncoding;
+      prv.shadowMap.enabled = true;
+      prv.shadowMap.type = T.PCFSoftShadowMap;
+    }
+    prv.setSize(w, h, false);
+    const scene = new T.Scene();
+    const SK = (ZG.Settings[s.zooId] || {}).sky || { top: '#5b9bd5', bottom: '#dcecf5' };
+    scene.background = new T.Color(SK.bottom);
+    scene.fog = new T.Fog(SK.bottom, 120, 320);
+    scene.add(new T.HemisphereLight('#e8f3ff', '#6b7a45', 0.65));
+    const plot = s.plots[concept.plot];
+    const { cx, cz, w: pw, d: pd } = plotWorld(plot);
+    const sun = new T.DirectionalLight('#fff4e0', 0.95);
+    sun.position.set(cx - 60, 110, cz + 50);
+    sun.target.position.set(cx, 0, cz);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    Object.assign(sun.shadow.camera, { left: -60, right: 60, top: 60, bottom: -60, near: 10, far: 300 });
+    sun.shadow.bias = -0.001;
+    scene.add(sun, sun.target);
+    const Z = ZG.zoo(s);
+    const lawn = Mo.mesh(new T.PlaneGeometry(400, 400), Mo.mat(Z.theme.grass), [cx, -0.02, cz], null, [-Math.PI / 2, 0, 0]);
+    lawn.receiveShadow = true;
+    scene.add(lawn);
+    for (const [ox, oz, ww, dd] of [[0, pd / 2 + 6, pw + 24, 10], [0, -pd / 2 - 6, pw + 24, 10], [pw / 2 + 6, 0, 10, pd + 24], [-pw / 2 - 6, 0, 10, pd + 24]]) {
+      const path = Mo.mesh(new T.PlaneGeometry(ww, dd), Mo.mat(Z.theme.path), [cx + ox, 0.01, cz + oz], null, [-Math.PI / 2, 0, 0]);
+      path.receiveShadow = true;
+      scene.add(path);
+    }
+    const fakeH = { id: 'preview-' + concept.key, biome: concept.biome, condition: 100, theming: ZG.Habitats.TIERS[concept.tier].theming, climate: concept.climate, features: concept.features, seed: concept.seed, tier: concept.tier, name: concept.name };
+    const fakeS = { zooId: s.zooId, animals: concept.species.map((sp) => ({ hab: fakeH.id, sp })) };
+    const g = buildHabitat(fakeS, plot, fakeH);
+    scene.add(g);
+    // Proposed residents
+    const pond = st.ponds.get(fakeH.id);
+    const rr = fbmSeed(concept.seed + 3);
+    for (const spId of concept.species.slice(0, 3)) {
+      const sp = ZG.SPECIES[spId];
+      const n = Math.max(1, Math.min(sp.group[1] > 10 ? 8 : 4, Math.round((sp.group[0] + sp.group[1]) / 2), Math.floor(plot.area / sp.space)));
+      for (let i = 0; i < n; i++) {
+        let x = 0, y = 0;
+        for (let k = 0; k < 12; k++) {
+          x = plot.x + 18 + rr() * (plot.w - 36);
+          y = plot.y + 18 + rr() * (plot.h - 36);
+          if (!inPond(pond, x, y, 4) || (Mo.swims(spId) && rr() < 0.4)) break;
+        }
+        const m = Mo.animal(spId, i % 2 ? 'F' : 'M', i === n - 1 && n > 2);
+        const [X, Zc] = toW(x, y);
+        m.root.position.set(X, habHeight(fakeH, plot, x, y) + 0.08, Zc);
+        m.root.rotation.y = rr() * 6.28;
+        Mo.animate(m, 0.3, i % 3 === 0 ? 1.2 : 0, i);
+        scene.add(m.root);
+      }
+    }
+    // Guests on the path for scale
+    for (let i = 0; i < 9; i++) {
+      const gm = new T.Group();
+      gm.add(Mo.mesh(Mo.scenery.personLegs, Mo.mat('#34495e')));
+      gm.add(Mo.mesh(Mo.scenery.personBody, Mo.mat(['#e74c3c', '#3498db', '#f1c40f', '#1abc9c', '#9b59b6'][i % 5])));
+      gm.add(Mo.mesh(Mo.scenery.personHead, Mo.mat('#d4a17a')));
+      gm.position.set(cx - pw / 2 + 4 + rr() * (pw - 8), 0, cz + pd / 2 + 3 + rr() * 5);
+      gm.rotation.y = Math.PI + (rr() - 0.5);
+      scene.add(gm);
+    }
+    const yaw = { A: 0.55, B: -0.5, C: 0.2 }[concept.key] || 0.4;
+    const dist = Math.max(pw, pd) * 0.92;
+    const cam = new T.PerspectiveCamera(40, w / h, 0.5, 1000);
+    cam.position.set(cx + Math.sin(yaw) * dist, dist * 0.62, cz + Math.cos(yaw) * dist);
+    cam.lookAt(cx, 0, cz - pd * 0.05);
+    prv.render(scene, cam);
+    const url = prv.domElement.toDataURL('image/jpeg', 0.88);
+    st.ponds.delete(fakeH.id);
+    scene.traverse((o) => {
+      if (o.geometry && !Object.values(Mo.G).includes(o.geometry) && !Object.values(Mo.scenery).includes(o.geometry)) o.geometry.dispose();
+    });
+    return url;
+  };
 
   R.reset = function () {
     if (st.scene) {

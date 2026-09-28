@@ -70,6 +70,7 @@
       }
     });
     void reserved;
+    for (const h of s.habitats) h.features = ZG.Design.defaultsFor(s, h);
     // A beloved "star" animal in the most appealing habitat
     const cands = s.animals.filter((a) => ZG.SPECIES[a.sp].appeal >= 7 && !a.star);
     if (cands.length) U.pick(s, cands).star = true;
@@ -278,6 +279,7 @@
   };
   Sim.deserialize = function (str) {
     const s = JSON.parse(str);
+    for (const h of s.habitats) h.features = h.features || [];
     Sim.reindex(s);
     s._fx = [];
     return s;

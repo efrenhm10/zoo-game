@@ -61,6 +61,8 @@
       construction: o.construction || null,
       renovation: null,
       sponsor: null,
+      features: o.features ? o.features.slice() : [],
+      brief: o.brief || null,
       opened: s.day,
       seed: U.ri(s, 1, 1e9),
     };
@@ -85,12 +87,17 @@
   H.startBuild = function (s, plotId, o) {
     const plot = s.plots[plotId];
     if (plot.hab) return { ok: false, msg: 'That plot is already in use.' };
-    const cost = H.buildCost(s, plot, o.tier, o.climate);
+    const features = o.features || [];
+    let cost = o.cost || H.buildCost(s, plot, o.tier, o.climate);
+    if (!o.cost) for (const f of features) cost += ZG.Design.featureCost(s, f);
     if (!ZG.Econ.canAfford(s, cost, true)) return { ok: false, msg: `You need ${U.money(cost)} in capital funds + cash (incl. credit line).` };
-    const days = Math.round(H.TIERS[o.tier].days * (ZG.zoo(s).governance === 'city' || ZG.zoo(s).governance === 'federal' ? 1.25 : 1) * U.rf(s, 0.9, 1.15));
+    const Z = ZG.zoo(s);
+    const days = Math.round((o.days || H.TIERS[o.tier].days * (Z.governance === 'city' || Z.governance === 'federal' ? 1.25 : 1)) * U.rf(s, 0.95, 1.12));
     ZG.Econ.spendCapital(s, 'construction', cost);
-    const h = H.create(s, plot, { name: o.name, biome: o.biome, tier: o.tier, climate: o.climate, theming: H.TIERS[o.tier].theming, condition: 100, construction: { days, total: days, cost } });
-    ZG.Sim.news(s, `🏗️ Groundbreaking! ${h.name} (${H.TIERS[o.tier].name}, ${ZG.BIOMES[o.biome].name}) — ${U.money(cost)}, opening in ~${Math.round(days / 30)} months.`, 'info');
+    const h = H.create(s, plot, { name: o.name, biome: o.biome, tier: o.tier, climate: o.climate, features, brief: o.brief, theming: Math.min(100, H.TIERS[o.tier].theming + features.length * 3), condition: 100, construction: { days, total: days, cost } });
+    if (o.species) h.intent = o.species.slice();
+    plot.savedDesign = null;
+    ZG.Sim.news(s, `🏗️ Groundbreaking! ${h.name} (${H.TIERS[o.tier].name}, ${ZG.BIOMES[o.biome].name}${features.length ? ', ' + features.length + ' special features' : ''}) — ${U.money(cost)}, opening in ~${Math.round(days / 30)} months.`, 'info');
     s.rep = U.clamp(s.rep + 1, 0, 100);
     return { ok: true, msg: 'Construction started.', hab: h };
   };
@@ -147,7 +154,7 @@
       ap += sp.appeal * Math.pow(list.length, 0.7) * (0.6 + 0.4 * avgW / 100) + babies * sp.appeal * 0.5;
     }
     const tier = H.TIERS[h.tier] || H.TIERS.standard;
-    return ap * (0.55 + 0.45 * h.condition / 100) * (0.7 + 0.3 * h.theming / 100) * tier.appeal;
+    return ap * (0.55 + 0.45 * h.condition / 100) * (0.7 + 0.3 * h.theming / 100) * tier.appeal * ZG.Design.appealMult(h);
   };
   H.totalAppeal = function (s) {
     let a = ZG.zoo(s).supporting.appeal;

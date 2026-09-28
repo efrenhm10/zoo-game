@@ -31,6 +31,28 @@ The game autosaves to your browser every in-game month.
 
 Figures are gameplay approximations inspired by the real institutions. Animal names are fictional.
 
+## 🗺️ Real surroundings
+
+Each zoo sits in a recreation of its real neighborhood:
+
+| Zoo | What's around it |
+|---|---|
+| Honolulu | Kapiʻolani Park in Waikīkī: Diamond Head, the beach and the Pacific, hotel towers, Kapahulu homes, the Koʻolau mountains, Kalākaua Ave traffic |
+| Houston | Hermann Park: McGovern Lake with pedal boats, the downtown skyline, Texas Medical Center towers, METRORail on Main St, Brays Bayou |
+| San Diego | Balboa Park's mesa and canyons: El Prado's Spanish Colonial buildings and the California Tower, Cabrillo Bridge, SR-163, downtown and the bay, eucalyptus and jacaranda |
+| National Zoo | The wooded Rock Creek valley and creek, Woodley Park rowhouses on Connecticut Ave, the Washington Monument and Capitol dome on the horizon |
+| Cheyenne Mountain | A pine-covered mountainside, the Will Rogers Shrine, the Sky Ride chairlift, the Broadmoor below, and Colorado Springs on the plains |
+
+## 📐 Designing habitats with an architect
+
+Click an available lot and choose **Meet with the architect**. Describe your idea in plain words, for example: *"A misty Sumatran rainforest for tigers with a waterfall, a pool with an underwater viewing tunnel and a keeper-talk amphitheater. Make it world-class. Call it Tiger Falls."* The architect picks out the animals, landscape, features, budget and name you mention, then presents **three rendered concepts**:
+
+- **Your Vision:** what you described.
+- **Smart & Affordable:** value-engineered, but it never drops what the animals need.
+- **Signature Landmark:** premium, plus a flourish or two.
+
+Each concept shows its cost, build time, guest appeal, welfare boost, upkeep, capacity and warnings (climate, species mixing, panda loans). You can build it or save it and launch a campaign for it. There are 21 features: pools, underwater tunnels, waterfalls, streams, rockwork, climbing structures, caves, mud wallows, bamboo, misting, beaches, skywalks, feeding decks, amphitheaters, aviaries, shade sails, solar power, cultural theming, play zones and more. They're built in 3D and they change animal welfare, guest appeal, upkeep and even income (feeding decks earn money).
+
 ## 🎮 What you manage
 
 - **Camera (manage mode).** Drag to pan, right-drag (or Shift+drag) to rotate, scroll to zoom, and use `WASD`/arrows to move and `Q`/`E` to rotate. Click a habitat to manage it.
@@ -57,6 +79,9 @@ js/sim/               simulation (no DOM): animals, staff, infra, habitats,
                       economy, aza, politics, development, events, sim
 js/ui/models.js       procedural 3D animals (56 species), people, avatar, trees
 js/ui/world3d.js      3D world: terrain, habitats, buildings, agents, cameras, weather
+js/ui/settings3d.js   real-world surroundings for each zoo (landmarks, skylines, traffic)
+js/ui/architect.js    design meetings with the exhibit architect
+js/sim/design.js      habitat features, brief parser and concept generator
 js/ui/portraits.js    roundel portraits rendered from the 3D models
 js/ui/                panels, creator, app (UI shell)
 js/vendor/            three.min.js (r149, MIT)

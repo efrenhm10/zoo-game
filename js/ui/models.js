@@ -198,6 +198,70 @@
       { geo: low, color: '#4f8a3a', matrix: mtx(0, 4.4, 0, 2.6, 2.3, 2.6), jitter: 0.25 },
       { geo: low, color: '#5a9a42', matrix: mtx(0.8, 5.4, 0.3, 1.7, 1.5, 1.7), jitter: 0.25 },
     ]);
+    S.banyan = M.merge([
+      { geo: G.taper, color: '#7a6a58', matrix: mtx(0, 1.8, 0, 0.9, 3.6, 0.9) },
+      { geo: G.cyl, color: '#7a6a58', matrix: mtx(1.8, 1.6, 0.6, 0.12, 3.2, 0.12) },
+      { geo: G.cyl, color: '#7a6a58', matrix: mtx(-1.6, 1.6, -0.8, 0.12, 3.2, 0.12) },
+      { geo: G.cyl, color: '#7a6a58', matrix: mtx(0.4, 1.6, -2, 0.12, 3.2, 0.12) },
+      { geo: low, color: '#3f7a35', matrix: mtx(0, 5.2, 0, 6.5, 2.4, 6), jitter: 0.25 },
+      { geo: low, color: '#4a8a3c', matrix: mtx(2.5, 6.2, 1, 3.5, 1.8, 3.5), jitter: 0.25 },
+      { geo: low, color: '#35702e', matrix: mtx(-2.5, 6, -1.4, 3.5, 1.8, 3.5), jitter: 0.25 },
+    ]);
+    S.oak = M.merge([
+      { geo: G.taper, color: '#5d4a38', matrix: mtx(0, 1.6, 0, 0.55, 3.2, 0.55) },
+      { geo: G.cyl, color: '#5d4a38', matrix: mtx(1.3, 3.2, 0, 0.18, 2.8, 0.18, 0, 0, -0.9) },
+      { geo: low, color: '#46703a', matrix: mtx(0, 4.8, 0, 4.8, 2.2, 4.4), jitter: 0.25 },
+      { geo: low, color: '#52803f', matrix: mtx(2.4, 4.5, 0.6, 2.8, 1.7, 2.8), jitter: 0.25 },
+    ]);
+    S.eucalyptus = M.merge([
+      { geo: G.taper, color: '#d9d2c2', matrix: mtx(0, 4, 0, 0.35, 8, 0.35) },
+      { geo: low, color: '#7d9a6a', matrix: mtx(0.4, 9, 0, 2.2, 3, 2.2), jitter: 0.2 },
+      { geo: low, color: '#8aa878', matrix: mtx(-0.6, 7.2, 0.5, 1.6, 2, 1.6), jitter: 0.2 },
+    ]);
+    S.jacaranda = M.merge([
+      { geo: G.taper, color: '#5d4a38', matrix: mtx(0, 1.6, 0, 0.3, 3.2, 0.3) },
+      { geo: low, color: '#9b7fd4', matrix: mtx(0, 4.2, 0, 3, 1.8, 3), jitter: 0.15 },
+      { geo: low, color: '#a98ee0', matrix: mtx(1, 4.8, 0.5, 1.8, 1.3, 1.8), jitter: 0.15 },
+    ]);
+    S.autumn = M.merge([
+      { geo: G.taper, color: trunk, matrix: mtx(0, 1.5, 0, 0.35, 3, 0.35) },
+      { geo: low, color: '#c9762e', matrix: mtx(0, 4.4, 0, 2.6, 2.3, 2.6), jitter: 0.3 },
+      { geo: low, color: '#b8452a', matrix: mtx(0.8, 5.4, 0.3, 1.7, 1.5, 1.7), jitter: 0.3 },
+    ]);
+    S.car = M.merge([
+      { geo: G.box, color: '#ffffff', matrix: mtx(0, 0.55, 0, 1.8, 0.7, 4.2) },
+      { geo: G.box, color: '#ffffff', matrix: mtx(0, 1.15, -0.2, 1.6, 0.55, 2.2) },
+      { geo: G.box, color: '#22303a', matrix: mtx(0, 1.15, -0.2, 1.64, 0.4, 2.0) },
+    ]);
+    S.bus = M.merge([
+      { geo: G.box, color: '#ffffff', matrix: mtx(0, 1.6, 0, 2.5, 2.9, 11) },
+      { geo: G.box, color: '#22303a', matrix: mtx(0, 2.1, 0, 2.55, 0.9, 10.2) },
+    ]);
+    S.catamaran = M.merge([
+      { geo: G.box, color: '#ffffff', matrix: mtx(-1.6, 0.4, 0, 0.9, 0.8, 10) },
+      { geo: G.box, color: '#ffffff', matrix: mtx(1.6, 0.4, 0, 0.9, 0.8, 10) },
+      { geo: G.box, color: '#e8e2d0', matrix: mtx(0, 0.9, 0, 4, 0.2, 7) },
+      { geo: G.cone, color: '#f5f5f5', matrix: mtx(0, 6, -0.5, 0.15, 10, 3, 0, 0, 0) },
+    ]);
+    S.sail = M.merge([
+      { geo: G.box, color: '#ffffff', matrix: mtx(0, 0.5, 0, 2.2, 1, 8) },
+      { geo: G.cyl, color: '#888', matrix: mtx(0, 6, 0.5, 0.08, 11, 0.08) },
+      { geo: G.cone, color: '#f7f7f2', matrix: mtx(0, 6, -0.6, 0.1, 9, 2.6) },
+    ]);
+    S.pedal = M.merge([
+      { geo: G.box, color: '#ffffff', matrix: mtx(0, 0.35, 0, 1.6, 0.6, 2.4) },
+      { geo: G.box, color: '#ffffff', matrix: mtx(0, 0.95, -0.2, 1.5, 0.08, 1.4) },
+      { geo: G.cyl, color: '#ffffff', matrix: mtx(0, 1.0, 1.1, 0.15, 1.2, 0.15, 0.4, 0, 0) },
+    ]);
+    S.tram = M.merge([
+      { geo: G.box, color: '#ffffff', matrix: mtx(0, 1.9, 0, 2.6, 3.2, 28) },
+      { geo: G.box, color: '#22303a', matrix: mtx(0, 2.4, 0, 2.65, 1.0, 27) },
+    ]);
+    S.chair = M.merge([
+      { geo: G.cyl, color: '#333', matrix: mtx(0, -1.2, 0, 0.04, 2.4, 0.04) },
+      { geo: G.box, color: '#2d6db5', matrix: mtx(0, -2.5, 0, 1.6, 0.15, 0.8) },
+      { geo: G.box, color: '#2d6db5', matrix: mtx(0, -2.1, -0.35, 1.6, 0.8, 0.12) },
+    ]);
     S.conifer = M.merge([
       { geo: G.taper, color: trunk, matrix: mtx(0, 0.8, 0, 0.3, 1.6, 0.3) },
       { geo: G.cone, color: '#2f6b3a', matrix: mtx(0, 2.6, 0, 2.2, 2.8, 2.2), jitter: 0.2 },

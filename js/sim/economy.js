@@ -172,6 +172,15 @@
       }
       util += (120 + Math.max(0, need) * 22) * (h.area / 5000) * (Z.utilities > 4e6 ? 1.6 : 1);
     }
+    // Designed-feature upkeep (pumps, misters, planting) and encounter decks
+    let upkeep = 0, decks = 0;
+    for (const h of s.habitats) {
+      if (h.construction || !h.features) continue;
+      upkeep += ZG.Design.upkeep(h);
+      if (h.features.includes('feedingDeck') && !h.renovation && s.animals.some((a) => a.hab === h.id && a.loc === 'hab')) decks++;
+    }
+    if (upkeep) upkeep > 0 ? E.spend(s, 'maintenance', upkeep / 365) : (util += upkeep / 365);
+    if (decks) E.earn(s, 'feeding', guests * 0.3 * Math.min(2, decks) * spendF);
     E.spend(s, 'utilities', util);
     const p = s.policy;
     E.spend(s, 'maintenance', p.maintenance / 365);

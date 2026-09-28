@@ -116,6 +116,7 @@
       // Core welfare, then multiplicative penalties for wrong biome/climate/mixing.
       let w = 0.15 * space + 0.1 * social + 0.45 * complexity + 0.3 * care - 3;
       w *= (biome === 100 ? 1 : 0.82) * (0.55 + 0.45 * climate / 100) * (mixOk ? 1 : 0.75);
+      w = Math.min(100, w + ZG.Design.welfareBonus(h, id));
       per[id] = { n, biome, climate, social, w, tempDiff: diff };
       void cond;
     }

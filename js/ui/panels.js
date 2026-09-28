@@ -141,6 +141,8 @@
       return html;
     }
     html += `<div class="grid2"><div>Condition ${bar(h.condition)}</div><div>Theming ${bar(h.theming)}</div></div>`;
+    if (h.features && h.features.length) html += `<div class="feats">${h.features.map((f) => `<span class="feat" title="${esc(ZG.Design.FEATURES[f].line)}">${ZG.Design.FEATURES[f].icon} ${esc(ZG.Design.FEATURES[f].name)}</span>`).join('')}</div>`;
+    if (h.brief) html += `<p class="sub">Design brief: “${esc(h.brief)}”</p>`;
     if (f) {
       html += `<div class="grid2"><div>Space ${bar(f.space)}</div><div>Keeper care ${bar(f.care)}</div></div>`;
       html += `<p class="sub">Space ratio ${f.spaceRatio.toFixed(1)}× minimum${f.mixOk ? '' : ' · <span class="bad">incompatible species mix!</span>'}</p>`;
@@ -176,7 +178,16 @@
     const fits = Object.values(ZG.SPECIES).filter((sp) => sp.biomes.includes(b.biome) && sp.program !== 'Loan');
     const cap = (sp) => Math.floor(p.area / sp.space);
     const opt = (arr, cur) => arr.map(([v, l]) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${l}</option>`).join('');
-    return `<div class="card"><h3>🪧 Plan a new habitat</h3><p class="sub">Lot size ${U.num(p.area)} m²</p>
+    const sd = p.savedDesign;
+    const saved = sd
+      ? `<div class="card saved"><h3>📁 Saved design: “${esc(sd.name)}”</h3><p class="sub">${esc(sd.title)} · ${ZG.BIOMES[sd.biome].name} · ${sd.features.map((f) => ZG.Design.FEATURES[f].icon).join(' ')}</p>
+        <p>Cost <b>${$(sd.cost)}</b> · ~${Math.round(sd.days / 30)} months</p><div class="actions">${btn('🏗️ Build saved design', 'buildSaved', { plot: p.id }, 'primary')}${btn('Discard', 'discardSaved', { plot: p.id }, 'sm')}</div></div>`
+      : '';
+    return `<div class="card architect-cta"><h3>📐 Design a new habitat</h3>
+      <p>Sit down with your exhibit architect, describe what you want in your own words, and get <b>three rendered concepts</b> with costs, timelines and welfare estimates.</p>
+      <div class="actions">${btn('🧑‍💼 Meet with the architect', 'architect', { plot: p.id }, 'primary')}</div></div>
+      ${saved}
+      <details class="card"><summary><b>Quick build from a template</b> <span class="sub">(skip the architect)</span></summary>
       <label>Name <input data-build="name" value="${esc(b.name)}" maxlength="40"></label>
       <label>Biome <select data-build="biome">${opt(Object.entries(ZG.BIOMES).map(([k, v]) => [k, v.name]), b.biome)}</select></label>
       <label>Design tier <select data-build="tier">${opt(Object.entries(ZG.Habitats.TIERS).map(([k, v]) => [k, `${v.name} (${$(v.perM2 * Z.costMult)}/m², theming ${v.theming})`]), b.tier)}</select></label>
@@ -184,7 +195,7 @@
       <p><b>Cost: ${$(cost)}</b> · build time ~${Math.round(days / 30)} months${Z.governance === 'city' || Z.governance === 'federal' ? ' (public procurement adds time)' : ''}</p>
       <p class="sub">Funds available: capital ${$(s.capital)} + cash ${$(s.cash)} + credit line ${$(ZG.Econ.creditLimit(s))}</p>
       <p class="sub">Suitable species (max group by space): ${fits.map((sp) => `${sp.emoji} ${sp.name} (${cap(sp)})`).join(', ')}</p>
-      <div class="actions">${btn('🏗️ Break ground', 'build', { plot: p.id }, 'primary')}${!s.dev.campaign ? btn(`Launch capital campaign for it (${$(cost)})`, 'campaign', { goal: cost, label: b.name }) : ''}</div></div>`;
+      <div class="actions">${btn('🏗️ Break ground', 'build', { plot: p.id })}${!s.dev.campaign ? btn(`Launch capital campaign for it (${$(cost)})`, 'campaign', { goal: cost, label: b.name }) : ''}</div></details>`;
   };
 
   // =====================================================================
@@ -490,6 +501,21 @@
     const r = ZG.Habitats.startBuild(s, +d.plot, { name: b.name || 'New Habitat', biome: b.biome, tier: b.tier, climate: b.climate });
     if (r.ok) P.ui.build = null;
     return r;
+  };
+  A.architect = (s, d) => {
+    ZG.Architect.open(s, +d.plot);
+    return null;
+  };
+  A.buildSaved = (s, d) => {
+    const p = s.plots[+d.plot];
+    const o = p.savedDesign;
+    if (!o) return null;
+    const r = ZG.Habitats.startBuild(s, p.id, { name: o.name, biome: o.biome, tier: o.tier, climate: o.climate, features: o.features, brief: o.brief, species: o.species, cost: o.cost, days: o.days });
+    return r;
+  };
+  A.discardSaved = (s, d) => {
+    s.plots[+d.plot].savedDesign = null;
+    return { ok: true, msg: 'Design discarded.' };
   };
   A.cultivate = (s, d) => {
     const p = s.dev.prospects.find((x) => x.id === +d.pid);
