@@ -117,6 +117,25 @@
     return { ok: true, msg: 'Renovation started.' };
   };
 
+  // Expand a habitat: an adjoining off-exhibit yard and a bigger night house (+30% space, up to twice).
+  H.MAX_EXPANSIONS = 2;
+  H.expandCost = function (s, h) {
+    const tier = H.TIERS[h.tier] || H.TIERS.standard;
+    return Math.round(h.area * 0.3 * tier.perM2 * ZG.zoo(s).costMult * 0.8 + 150000 * ZG.zoo(s).costMult);
+  };
+  H.expand = function (s, hid) {
+    const h = s.habitatsById[hid];
+    if (!h || h.construction || h.renovation || h.expanding) return { ok: false, msg: 'Not available right now.' };
+    if ((h.expansions || 0) >= H.MAX_EXPANSIONS) return { ok: false, msg: `${h.name} has already been expanded as far as the site allows.` };
+    const cost = H.expandCost(s, h);
+    if (!ZG.Econ.canAfford(s, cost, true)) return { ok: false, msg: `Not enough funds (${U.money(cost)}).` };
+    ZG.Econ.spendCapital(s, 'construction', cost);
+    const days = ZG.zoo(s).governance === 'city' || ZG.zoo(s).governance === 'federal' ? 110 : 90;
+    h.expanding = { days, total: days };
+    ZG.Sim.news(s, `📐 Expanding ${h.name}: a new adjoining yard and bigger night house (${U.money(cost)}, ~${Math.round(days / 30)} months). The animals stay on exhibit.`, 'info');
+    return { ok: true, msg: `Expansion started. ${h.name} gets 30% more space in about ${Math.round(days / 30)} months.` };
+  };
+
   // Re-landscape a habitat for a different biome (a bigger renovation).
   H.relandscapeCost = function (s, h) {
     return Math.round(H.replaceCost(s, h) * 0.45 + 80000);
@@ -181,6 +200,16 @@
   H.daily = function (s) {
     const eff = ZG.Infra.maintEffect(s);
     for (const h of s.habitats) {
+      if (h.expanding) {
+        h.expanding.days--;
+        if (h.expanding.days <= 0) {
+          const before = h.area;
+          h.area = Math.round(h.area * 1.3);
+          h.expansions = (h.expansions || 0) + 1;
+          h.expanding = null;
+          ZG.Sim.news(s, `📐 ${h.name} expansion finished: ${U.num(before)} → ${U.num(h.area)} m². There's room for more animals now.`, 'good');
+        }
+      }
       if (h.construction) {
         h.construction.days--;
         if (h.construction.days <= 0) {

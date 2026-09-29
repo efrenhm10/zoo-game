@@ -11,6 +11,13 @@
     if (!s.ssp.requests) s.ssp.requests = [];
   };
 
+  // How many more animals of a species fit in a habitat (after residents and open requests).
+  RQ.room = function (s, h, spId) {
+    const used = s.animals.filter((a) => a.hab === h.id).reduce((t, a) => t + ZG.SPECIES[a.sp].space, 0) +
+      s.ssp.requests.filter((r) => r.hab === h.id && (r.status === 'pending' || r.status === 'waitlist')).reduce((t, r) => t + ZG.SPECIES[r.sp].space * (r.males + r.females), 0);
+    return Math.max(0, Math.floor((h.area - used) / ZG.SPECIES[spId].space));
+  };
+
   RQ.cost = function (s, spId, n) {
     return Math.round(AZA().transportCost(s, spId) * (n > 1 ? 1 + n * 0.15 : 1) + 5000 * Math.min(n, 3));
   };
@@ -32,7 +39,7 @@
     spIds.add(spId);
     if (spIds.size > 1 && ![...spIds].every((id) => ZG.SPECIES[id].mix && ZG.SPECIES[id].mix === sp.mix)) return Object.assign(out, { ok: false, block: `${sp.name}s can't be mixed with the species already in ${h.name}.` });
     const need = res.reduce((t, a) => t + ZG.SPECIES[a.sp].space, 0) + pending.reduce((t, r) => t + ZG.SPECIES[r.sp].space * (r.males + r.females), 0) + sp.space * n;
-    if (need > h.area) return Object.assign(out, { ok: false, block: `Not enough room: ${h.name} has ${U.num(h.area)} m² and this would need ${U.num(Math.round(need))} m². Standards require more space per animal.` });
+    if (need > h.area) return Object.assign(out, { ok: false, block: `Not enough room: ${h.name} has ${U.num(h.area)} m² and this would need ${U.num(Math.round(need))} m². Standards require more space per animal.${(h.expansions || 0) < ZG.Habitats.MAX_EXPANSIONS && !h.construction ? ' Expanding the habitat would make room.' : ''}` });
 
     let o = sp.program === 'SSP' ? 0.5 : 0.72;
     o += (s.aza - 60) / 120;

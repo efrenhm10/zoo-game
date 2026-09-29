@@ -349,6 +349,9 @@
     const r = P.ui.req || {};
     return ZG.Requests.submit(s, r.sp, r.m, r.f, r.hab);
   };
+  A.reqQuick = (s, d) => ZG.Requests.submit(s, d.sp, +d.m, +d.f, +d.hab);
+  A.acquireInto = (s, d) => ZG.AZA.acquire(s, +d.oid, +d.hab);
+  A.expand = (s, d) => ZG.Habitats.expand(s, +d.hab);
   A.reqCancel = (s, d) => ZG.Requests.cancel(s, +d.id);
   A.treat = (s, d) => ZG.Animals.treat(s, +d.aid, d.lvl);
 

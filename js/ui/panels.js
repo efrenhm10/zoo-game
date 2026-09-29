@@ -159,14 +159,13 @@
         html += `<p class="sprow">${ZG.Portraits.img(id, 'portrait xs')} <b>${sp.name}</b> ×${x.n} — habitat welfare <b class="${cls(x.w)}">${Math.round(x.w)}</b>${notes.length ? ` <span class="warn">(${notes.join(', ')})</span>` : ''}</p>`;
       }
     }
-    if (!animals.length) html += `<p class="warn">No animals here. Get some from the Animal Exchange (Collection tab) or SSP recommendations.</p>`;
+    html += P.addAnimals(s, h);
     const ren = ZG.Habitats.renovateCost(s, h);
     const them = Math.round(h.area * 220 * Z.costMult);
     html += `<div class="actions">
       ${h.renovation ? `<span>🛠️ Renovating (${Math.ceil(h.renovation.days / 30)} mo left)</span>` : btn(`Renovate (${$(ren)})`, 'renovate', { hab: h.id })}
       ${h.theming < 95 && !h.renovation ? btn(`Improve theming (${$(them)})`, 'theming', { hab: h.id }) : ''}
       ${h.climate === 'none' ? btn(`Add heated building (${$(1.2e6 * Z.costMult + h.area * 250)})`, 'climate', { hab: h.id, type: 'heated' }) + btn(`Add chilled building (${$(1.2e6 * Z.costMult + h.area * 250)})`, 'climate', { hab: h.id, type: 'chilled' }) : ''}
-      ${btn(animals.length ? '📨 Request more animals' : '📨 Request animals', 'reqFor', { hab: h.id })}
       ${!animals.length ? btn('Demolish', 'demolish', { hab: h.id }, 'danger') : ''}
     </div>
     <p class="sub">Capital work draws on the capital fund first, then operating cash.</p></div>`;
@@ -277,6 +276,50 @@
     }
     html += P.market(s);
     return html;
+  };
+
+  // "Add animals" section inside a habitat: room left, quick requests, offers available now, expansion.
+  P.addAnimals = function (s, h) {
+    const RQ = ZG.Requests;
+    const res = s.animals.filter((a) => a.hab === h.id);
+    const spIds = [...new Set(res.map((a) => a.sp))];
+    const used = res.reduce((t, a) => t + spn(a.sp).space, 0);
+    const mixOk = (id) => spIds.every((x) => x === id || (spn(x).mix && spn(x).mix === spn(id).mix));
+    const quick = (id, m, f) => {
+      const e = RQ.estimate(s, id, m, f, h.id);
+      const label = m && f ? `+${m + f} (${m}♂ ${f}♀)` : `+${m + f} ${m ? '♂' : '♀'}`;
+      return e.ok ? btn(`${label} <small>${Math.round(e.odds * 100)}%</small>`, 'reqQuick', { hab: h.id, sp: id, m, f }, 'sm') : `<button class="btn sm" disabled title="${esc(e.block)}">${label}</button>`;
+    };
+    const rows = spIds
+      .map((id) => {
+        const sp = spn(id);
+        const n = res.filter((a) => a.sp === id).length;
+        const room = RQ.room(s, h, id);
+        return `<div class="addrow">${ZG.Portraits.img(id, 'portrait xs')}<div class="addinfo"><b>${sp.name}</b> <small>×${n} now · ${room ? `room for <b>${room}</b> more` : '<span class="bad">no room</span>'} · natural group ${sp.group[0]}–${sp.group[1]}</small></div>
+          <div class="actions">${sp.program === 'Loan' ? '<small class="sub">Loan animals only</small>' : quick(id, 0, 1) + quick(id, 1, 0) + (room >= 2 ? quick(id, 0, 2) : '') + (sp.group[0] >= 6 && room >= 6 ? quick(id, 2, 4) : '')}</div></div>`;
+      })
+      .join('');
+    const pend = s.ssp.requests.filter((r) => r.hab === h.id && (r.status === 'pending' || r.status === 'waitlist'));
+    const pendHtml = pend.length ? `<p class="sub">📨 Waiting on the AZA: ${pend.map((r) => `${r.males}♂ ${r.females}♀ ${spn(r.sp).name} (${r.status === 'waitlist' ? 'waitlisted' : 'decision'} ~${U.fmtDate(r.decide)})`).join(', ')}</p>` : '';
+    const offers = s.market
+      .filter((o) => spn(o.sp).biomes.includes(h.biome) && mixOk(o.sp) && RQ.room(s, h, o.sp) >= o.count)
+      .map((o) => `<div class="addrow">${ZG.Portraits.img(o.sp, 'portrait xs')}<div class="addinfo"><b>${o.count > 1 ? o.count + '× ' : ''}${spn(o.sp).name}</b> <small>${o.count === 1 ? (o.sex === 'M' ? '♂ · ' : '♀ · ') : ''}${U.ageStr(o.age)} · from ${esc(o.from)} · offer ends ${U.fmtDate(o.expires)}</small></div>
+        <div class="actions">${btn(`Accept now (${$(o.cost)})`, 'acquireInto', { oid: o.id, hab: h.id }, 'sm primary')}</div></div>`)
+      .join('');
+    const exp = h.expansions || 0;
+    const expand = h.expanding
+      ? `<p>📐 Expansion underway: about ${Math.ceil(h.expanding.days / 30)} month(s) left. The habitat grows to ${U.num(Math.round(h.area * 1.3))} m².</p>`
+      : exp < ZG.Habitats.MAX_EXPANSIONS
+        ? `<div class="actions">${btn(`📐 Expand habitat +30% (${$(ZG.Habitats.expandCost(s, h))}, ~3 months)`, 'expand', { hab: h.id })}<small class="sub">Adds an adjoining yard and a bigger night house. ${exp ? 'One more expansion possible.' : 'Up to two expansions.'}</small></div>`
+        : '<p class="sub">📐 Fully expanded: the site has no more room.</p>';
+    return `<div class="card addcard"><h3 style="margin-top:0">➕ Add animals</h3>
+      <div class="rel"><span>Space used</span>${bar(Math.min(100, (used / h.area) * 100), 100, used > h.area ? 'bad' : used > h.area * 0.85 ? 'warn' : 'good')}<b>${U.num(Math.round(used))} / ${U.num(h.area)} m²</b></div>
+      ${rows || '<p class="sub">No animals here yet.</p>'}
+      ${spIds.length ? '<p class="sub">Quick requests go to the AZA/SSP coordinator. The % is the chance of approval, and the decision takes 1–3 months.</p>' : ''}
+      ${pendHtml}
+      ${offers ? `<h4>Available right now</h4>${offers}` : ''}
+      <div class="actions">${btn(spIds.length ? '➕ Add a different species…' : '📨 Choose species to request…', 'reqFor', { hab: h.id }, spIds.length ? '' : 'primary')}</div>
+      ${expand}</div>`;
   };
 
   // Ask the AZA / SSP coordinators for specific animals.

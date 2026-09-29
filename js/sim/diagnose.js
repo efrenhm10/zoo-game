@@ -69,6 +69,7 @@
         const home = D.bestHome(s, big, h.id);
         if (extra && home) fixes.push(fix(`Move ${extra.name} to ${home.name}`, 'moveAnimal', { aid: extra.id, hab: home.id }));
         if (extra) fixes.push(fix(`Transfer ${extra.name} to another zoo`, 'sendOut', { aid: extra.id }));
+        if ((h.expansions || 0) < ZG.Habitats.MAX_EXPANSIONS && !h.expanding) fixes.push(fix(`Expand the habitat +30% (${$(ZG.Habitats.expandCost(s, h))})`, 'expand', { hab: h.id }));
         add('bad', '📏', 'Overcrowded',
           `The animals have only ${Math.round(f.spaceRatio * 100)}% of the minimum space they need (${U.num(h.area)} m² for ${animals.length} animals). Crowding causes fighting and stress.`, fixes);
       }
