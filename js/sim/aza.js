@@ -77,7 +77,8 @@
       s.ssp.recs.push({ id: s.nextId++, sp: sp.id, type: 'hold', created: s.day, deadline: s.day + 1095, status: 'open', aids: [], partner: `${sp.cls === 'bird' ? 'Avian' : sp.cls === 'reptile' ? 'Reptile' : 'Mammal'} Taxon Advisory Group`, text: `The TAG is asking zoos to commit space for ${sp.name}s (IUCN: ${sp.iucn}). Build or dedicate a habitat and acquire them within 3 years.` });
       made++;
     }
-    ZG.Sim.news(s, `📋 AZA published new Breeding & Transfer Plans: ${made} recommendation${made === 1 ? '' : 's'} for your zoo. Check the Conservation tab.`, 'info');
+    ZG.Sim.news(s, `📋 AZA published new Breeding & Transfer Plans: ${made} recommendation${made === 1 ? '' : 's'} for your zoo. See 🧬 Conservation → SSP plans.`, 'info');
+    if (made) ZG.Events.queue(s, 'ssp_plan', { year: U.dateOf(s.day).y });
   };
 
   Z_.respond = function (s, rid, accept, habId) {
@@ -163,8 +164,15 @@
       return 'recommended';
     }
     const nb = s.ssp.recs.find((r) => r.sp === mom.sp && r.type === 'nobreed' && (r.status === 'open' || r.status === 'accepted'));
-    s.aza = U.clamp(s.aza - (nb ? 5 : 2.5), 0, 100);
-    ZG.Sim.news(s, `⚠️ Unplanned ${sp.name} birth — not recommended by the SSP. Future placement of the offspring may be difficult.`, 'bad');
+    if (nb) {
+      s.aza = U.clamp(s.aza - 5, 0, 100);
+      ZG.Sim.news(s, `⚠️ ${sp.name} birth despite the SSP's do-not-breed order. The coordinator is not happy, and it won't count toward your breeding goals.`, 'bad');
+      return 'unplanned';
+    }
+    // Not on this year's plan, but the population can use it: it counts, with a small ding for not coordinating.
+    if (babies.length) s.stats.sspBirths++;
+    s.aza = U.clamp(s.aza - 1, 0, 100);
+    ZG.Sim.news(s, `🍼 ${sp.name} birth. It wasn't on the SSP's plan, but it's a healthy addition to the population. Next time, follow a breeding recommendation for a bigger AZA boost.`, 'info');
     return 'unplanned';
   };
 

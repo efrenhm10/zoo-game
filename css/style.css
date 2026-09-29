@@ -411,3 +411,6 @@ th.sitehead { text-align: left; padding-top: 12px; color: var(--olive2); font-si
 th.sitehead small { color: var(--muted); font-weight: 600; }
 .card.rainy { border-color: #6f9fc9; background: #f5f9fd; }
 .card.rainy .warnbox .actions { margin-top: 5px; }
+.goalprog { color: var(--olive2); font-size: 0.8rem; margin-left: 4px; }
+.card.partner { border-color: var(--olive); }
+.picon { font-size: 1.8rem; width: 42px; text-align: center; }

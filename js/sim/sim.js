@@ -111,6 +111,20 @@
     ZG.Requests.init(s);
     ZG.Growth.init(s);
     ZG.Reserve.init(s);
+    ZG.Field.init(s);
+    // Older saves only counted SSP-recommended births; credit healthy SSP births already on the grounds.
+    if (!s.stats.birthsV2) {
+      s.stats.birthsV2 = true;
+      const litters = new Set();
+      let giraffes = 0;
+      for (const a of s.animals) {
+        if (!a.bornHere) continue;
+        if (ZG.SPECIES[a.sp].program !== 'none' && !a.inbred) litters.add(a.dam + ':' + Math.round(a.age / 30));
+        if (a.sp.includes('giraffe') && a.sp !== 'giraffe') giraffes++;
+      }
+      s.stats.sspBirths = Math.max(s.stats.sspBirths || 0, litters.size);
+      s.stats.giraffeBirths = (s.stats.giraffeBirths || 0) + giraffes;
+    }
   };
 
   Sim.reindex = function (s) {
@@ -126,6 +140,7 @@
     ZG.ZooEvents.daily(s);
     ZG.Requests.daily(s);
     ZG.Growth.daily(s);
+    ZG.Field.daily(s);
     if (s.closure) {
       s.closure.days--;
       if (s.closure.days <= 0) {
@@ -182,6 +197,7 @@
     ZG.Merch.monthly(s, t);
     ZG.Growth.monthly(s, t);
     ZG.Reserve.monthly(s, t);
+    ZG.Field.monthly(s, t);
     ZG.AZA.monthly(s, t);
     ZG.AZA.refreshMarket(s);
     if (t.m === 1 && s.day > 60) ZG.AZA.generatePlan(s);

@@ -11,7 +11,7 @@
     { id: 'overview', icon: '🏠', name: 'Overview' },
     { id: 'habitats', icon: '🏞️', name: 'Habitats & Build' },
     { id: 'animals', icon: '🦒', name: 'Collection' },
-    { id: 'conservation', icon: '🧬', name: 'AZA & SSP' },
+    { id: 'conservation', icon: '🧬', name: 'Conservation' },
     { id: 'facilities', icon: '🔧', name: 'Infrastructure' },
     { id: 'finance', icon: '💰', name: 'Budget' },
     { id: 'staff', icon: '👥', name: 'Staff' },
@@ -48,7 +48,8 @@
     const objs = Z.objectives
       .map((o) => {
         const st = s.objectives.find((x) => x.id === o.id);
-        return `<li class="${st.done ? 'done' : ''}">${st.done ? '✅' : '⬜'} ${esc(o.text)}</li>`;
+        const pr = !st.done && o.prog ? o.prog(s) : null;
+        return `<li class="${st.done ? 'done' : ''}">${st.done ? '✅' : '⬜'} ${esc(o.text)}${pr ? ` <b class="goalprog">${U.num(Math.min(pr[0], pr[1]))}${pr[2] || ''} / ${U.num(pr[1])}${pr[2] || ''}</b>` : ''}</li>`;
       })
       .join('');
     return `
@@ -139,7 +140,7 @@
     const spList = [...new Set(animals.map((a) => a.sp))];
     const lock = ZG.Habitats.renameLock(s, h);
     const title = P.ui.renaming === h.id && !lock
-      ? `<div class="rename"><input id="rename-input" data-rename="${h.id}" value="${esc(h.name)}" maxlength="40" aria-label="New habitat name">${btn('Save', 'renameSave', { hab: h.id }, 'sm primary')}${btn('Cancel', 'renameCancel', {}, 'sm')}</div>`
+      ? `<div class="rename"><input id="rename-input" data-rename="${h.id}" value="${esc(P.ui.renameDraft != null ? P.ui.renameDraft : h.name)}" maxlength="40" aria-label="New habitat name">${btn('Save', 'renameSave', { hab: h.id }, 'sm primary')}${btn('Cancel', 'renameCancel', {}, 'sm')}</div>`
       : `<div class="htitle"><h3>${esc(h.sponsor ? h.sponsor + ' ' + h.name : h.name)}</h3>${lock ? `<span class="sub" title="${esc(lock)}">🔒 Sponsor-named</span>` : btn('✏️ Rename', 'renameStart', { hab: h.id }, 'sm')}</div>`;
     let html = `<div class="card">${title}${h.donorName ? `<p class="sub">Named in honor of ${esc(h.donorName)}</p>` : ''}
       <p class="sub">${ZG.BIOMES[h.biome].name} · ${U.num(h.area)} m² · ${ZG.Habitats.TIERS[h.tier].name}${h.climate !== 'none' ? ' · ' + (h.climate === 'chilled' ? '❄️ chilled building' : '🔥 heated building') : ''}</p>`;
@@ -714,6 +715,7 @@
     return { ok: true, msg: 'Climate control installed. Watch your utility bills.' };
   };
   A.select = (s, d) => {
+    if (ZG.Render.state.selected !== +d.plot) (P.ui.renaming = null), (P.ui.renameDraft = null);
     ZG.Render.state.selected = +d.plot;
     P.ui.tab = 'habitats';
     if (P.ui.sub) P.ui.sub.habitats = 'list';

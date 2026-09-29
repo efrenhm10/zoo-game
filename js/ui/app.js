@@ -196,6 +196,7 @@
     if (!s || !winOpen) return;
     const active = document.activeElement;
     if (!force && active && el.panel.contains(active) && (active.tagName === 'INPUT' || active.tagName === 'SELECT')) return;
+    if (!force && ZG.Panels.ui.renaming != null && ZG.Panels.ui.tab === 'habitats' && el.panel.querySelector('#rename-input')) return; // don't wipe a name being typed
     const scroll = el.panel.scrollTop;
     el.panel.innerHTML = ZG.Panels.render(s);
     el.panel.scrollTop = scroll;
@@ -230,6 +231,13 @@
   function chooseEvent(i) {
     const r = ZG.Events.choose(s, i);
     panelDirty = true;
+    if (r && r.open) {
+      closeModal();
+      if (r.sub) ZG.Panels.ui.sub[r.open] = r.sub;
+      winOpen = false;
+      openWindow(r.open);
+      return;
+    }
     if (r && r.result) {
       el['modal-root'].innerHTML = `<div class="modal-back"><div class="modal result"><div class="m-head"><span class="m-icon">${r.icon || '📌'}</span><h2>${r.title}</h2></div><div class="m-body"><p><i>You chose: ${esc(r.choice)}</i></p><p>${esc(r.result)}</p></div><div class="m-choices"><button class="choice" data-close="1"><b>Continue</b></button></div></div></div>`;
     } else closeModal();
@@ -441,6 +449,7 @@
         const proj = el.panel.querySelector('#budget-proj');
         if (proj && s) proj.innerHTML = ZG.Panels.budgetProjection(s, { [k]: v });
       }
+      if (t.id === 'rename-input') ZG.Panels.ui.renameDraft = t.value;
       if (t.dataset && t.dataset.build) {
         ZG.Panels.ui.build[t.dataset.build] = t.value;
         if (t.tagName === 'SELECT') renderPanel(true);

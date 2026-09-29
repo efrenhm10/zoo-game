@@ -83,7 +83,7 @@
     ZG.Econ.spend(s, 'admin', 6000);
     let odds = g.odds;
     if (g.needs === 'education') odds *= U.clamp(ZG.Staff.ratio(s, 'education'), 0.4, 1.3) * (s.flags.eduBoost > s.day ? 1.25 : 1);
-    if (g.needs === 'conservation') odds *= U.clamp(s.aza / 70, 0.4, 1.3);
+    if (g.needs === 'conservation') odds *= U.clamp(s.aza / 70, 0.4, 1.3) * (s.flags.researchBoost > s.day ? 1.25 : 1) * (s.field && s.field.partners.length ? 1.1 : 1);
     if (g.needs === 'infrastructure') odds *= ZG.Infra.avgCond(s) < 50 ? 1.3 : 0.7;
     odds *= ZG.mod(s, 'fundraising') * (ZG.Growth.adopted(s) ? 1.1 : 1);
     s.dev.grants.push({ name: g.name, amt: U.ri(s, g.amt[0], g.amt[1]), odds: U.clamp(odds, 0.03, 0.9), day: s.day + U.ri(s, 75, 150), infra: g.needs === 'infrastructure' });

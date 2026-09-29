@@ -36,6 +36,96 @@
   insertAfter('finance', { id: 'business', icon: '🎪', name: 'Events & Shop' });
 
   // =====================================================================
+  // CONSERVATION (SSP plans, field partners, accreditation)
+  // =====================================================================
+  P.tab_conservation = function (s) {
+    const st = subtabs('conservation', [['ssp', '🧬 SSP plans'], ['field', '🌍 Field partners'], ['accred', '🏅 Accreditation']]);
+    const body = st.cur === 'field' ? P.fieldView(s) : st.cur === 'accred' ? P.accredView(s) : P.sspView(s);
+    return `<h2>🧬 Conservation</h2>${st.html}${body}`;
+  };
+
+  P.sspView = function (s) {
+    const spn = (id) => ZG.SPECIES[id];
+    const recs = s.ssp.recs.slice().sort((a, b) => (a.status === 'open' ? -1 : 1) - (b.status === 'open' ? -1 : 1) || b.created - a.created);
+    const typeName = { breed: '💞 Breed', nobreed: '🚫 Do not breed', send: '📤 Send out', receive: '📥 Receive', hold: '🏠 Space request' };
+    const recHtml = recs
+      .map((r) => {
+        const sp = spn(r.sp);
+        let acts = '';
+        if (r.status === 'open') {
+          if (r.type === 'receive') {
+            const habs = s.habitats.filter((h) => !h.construction && sp.biomes.includes(h.biome));
+            acts = `<select data-rechab="${r.id}">${habs.map((h) => `<option value="${h.id}" ${s.animals.some((a) => a.hab === h.id && a.sp === r.sp) ? 'selected' : ''}>${esc(h.name)}</option>`).join('')}</select>`;
+            acts += habs.length ? btn(`Accept (${$(ZG.AZA.transportCost(s, r.sp))})`, 'ssp', { rid: r.id, yes: 1 }, 'sm primary') : dis('Accept', 'Build a suitable habitat first');
+          } else if (r.type === 'hold') acts = btn('Commit space', 'ssp', { rid: r.id, yes: 1 }, 'sm primary') + btn('📨 Request them', 'reqForSp', { sp: r.sp }, 'sm');
+          else acts = btn(r.type === 'nobreed' ? 'Acknowledge' : 'Accept', 'ssp', { rid: r.id, yes: 1 }, 'sm primary');
+          acts += btn('Decline', 'ssp', { rid: r.id, yes: 0 }, 'sm');
+        }
+        const who = (r.aids || []).map((id) => ZG.Animals.byId(s, id)).filter(Boolean).map((a) => `${esc(a.name)} ${U.sexIcon(a.sex)}`).join(' × ');
+        return `<div class="card rec ${r.status}"><div class="offer-top">${ZG.Portraits.img(r.sp, 'portrait sm')}<div><b>${typeName[r.type]}</b> · ${sp.name} <small>(${sp.iucn})</small> <span class="pill">${r.status}</span>${who ? `<br><small>${who}</small>` : ''}</div></div><p>${esc(r.text)}</p><small>${esc(r.partner)} · respond by ${U.fmtDate(r.deadline)}</small><div class="actions">${acts}</div></div>`;
+      })
+      .join('');
+    const goal = ZG.zoo(s).objectives.find((o) => o.id.startsWith('ssp'));
+    const open = recs.filter((r) => r.status === 'open').length;
+    return `<div class="card"><p>Each <b>Species Survival Plan</b> manages one species as a single North American population. Every February the coordinators publish <b>Breeding & Transfer Plans</b>: which of your animals should breed, which should move to another zoo, and which species need space.</p>
+      <p class="sub">💞 Accepting a breed recommendation takes that pair off contraception. Births from recommended pairs give the biggest AZA boost. Other healthy births of SSP species still count toward your goals, but births under a do-not-breed order don't.</p>
+      <div class="kpis"><div><small>Open recommendations</small><b class="${open ? 'warn' : ''}">${open}</b></div><div><small>SSP births (career)</small><b>${s.stats.sspBirths}</b></div>${goal ? `<div><small>Goal</small><b>${Math.min(s.stats.sspBirths, goal.prog(s)[1])} / ${goal.prog(s)[1]}</b></div>` : ''}</div>
+      ${meter('AZA standing', s.aza, 'How the AZA and SSP coordinators view your zoo')}</div>
+      <h3>Recommendations</h3>${recHtml || '<p class="sub">No recommendations yet. New plans are published every February.</p>'}`;
+  };
+
+  P.accredView = function (s) {
+    const sc = ZG.AZA.inspectionScore(s);
+    const parts = Object.entries(sc.parts).map(([k, v]) => `<tr><td>${k}</td><td style="width:110px">${bar(v)}</td><td>${Math.round(v)}</td></tr>`).join('');
+    return `<div class="card"><h3 style="margin-top:0">Accreditation: <span class="${s.acc.status === 'accredited' ? 'good' : 'bad'}">${s.acc.status.toUpperCase()}</span></h3>
+      <p>Next inspection: <b>${U.fmtDate(s.acc.next)}</b>. Estimated score today: <b class="${sc.total >= 68 ? 'good' : sc.total >= 56 ? 'warn' : 'bad'}">${Math.round(sc.total)}</b> (need 68)</p>
+      <table class="list">${parts}</table></div>${meter('AZA standing', s.aza)}`;
+  };
+
+  P.fieldView = function (s) {
+    const F = ZG.Field, fs = s.field;
+    const each = F.funding(s);
+    const cards = fs.partners
+      .map((p) => {
+        const Pd = F.PARTNERS[p.id];
+        const held = F.held(s, p.id);
+        const pr = p.project;
+        const projHtml = pr
+          ? `<p>${F.PROJECTS[pr.type].icon} <b>${F.PROJECTS[pr.type].name}</b>${pr.name ? ` (${esc(pr.name)})` : ''}: done ${U.fmtDate(pr.end)}</p>${bar(((s.day - pr.start) / Math.max(1, pr.end - pr.start)) * 100)}`
+          : `<div class="actions">${Object.entries(F.PROJECTS)
+              .filter(([k]) => k !== 'release' || (Pd.release || []).length)
+              .map(([k, T]) => btn(`${T.icon} ${T.name} (${$(Math.round(T.cost(s) / 1000) * 1000)})`, 'fieldProj', { id: p.id, type: k }, 'sm'))
+              .join('')}</div>`;
+        const fund = each / F.target(s);
+        return `<div class="card partner"><div class="donor-top"><span class="picon">${Pd.icon}</span><div class="dmeta"><b>${esc(Pd.name)}</b><small>${esc(Pd.region)} · ${esc(Pd.work)}</small></div></div>
+          <div class="rel"><span>Funding</span>${bar(Math.min(100, fund * 100))}<b class="${fund >= 1 ? 'good' : fund >= 0.5 ? 'warn' : 'bad'}">${$(each)}/yr</b></div>
+          <div class="rel"><span>Next field report</span>${bar(((p.impact % 12) / 12) * 100)}<b>${p.milestones} so far</b></div>
+          ${held.length ? `<p class="sub">⭐ Signature program: your ${held.map((x) => `${ZG.Portraits.img(x, 'portrait xs')} ${ZG.SPECIES[x].name}`).join(', ')} tell this story to guests (+25% impact).</p>` : '<p class="sub">You hold none of their species. Programs with a species guests can see have more impact.</p>'}
+          ${projHtml}<div class="actions">${btn('End partnership', 'fieldLeave', { id: p.id }, 'sm danger')}</div></div>`;
+      })
+      .join('');
+    const avail = F.suggest(s)
+      .filter((id) => !fs.partners.some((p) => p.id === id))
+      .map((id) => {
+        const Pd = F.PARTNERS[id];
+        const held = F.held(s, id);
+        return `<div class="card"><div class="row"><b>${Pd.icon} ${esc(Pd.name)}</b><span class="sub">${esc(Pd.region)}</span></div><small>${esc(Pd.work)}.</small>
+          <p class="sub">${held.length ? `⭐ Matches your ${held.map((x) => ZG.SPECIES[x].name).join(', ')}` : 'No matching species in your collection'}${(Pd.release || []).length ? ` · 🕊️ can release ${(Pd.release || []).map((x) => ZG.SPECIES[x].name).join(', ')}` : ''}</p>
+          <div class="actions">${fs.partners.length < F.MAX ? btn('🤝 Partner with them', 'fieldJoin', { id }, 'sm primary') : dis('Partner with them', `You already have ${F.MAX} partners`)}</div></div>`;
+      })
+      .join('');
+    const rep = fs.reports.slice(0, 8).map((r) => `<li><small>${U.fmtDate(r.day)}</small> ${F.PARTNERS[r.id] ? F.PARTNERS[r.id].icon : '🌍'} ${esc(r.text)}</li>`).join('');
+    return `<div class="card"><p>Zoos fund and work with conservation nonprofits in the wild. Choose up to <b>${F.MAX} partners</b>; your field-conservation budget is shared among them. Run projects together, and field reports come back as your support makes a difference.</p>
+      <div class="kpis"><div><small>Partners</small><b>${fs.partners.length} / ${F.MAX}</b></div><div><small>Rangers funded</small><b>${fs.stats.rangers}</b></div><div><small>Animals released</small><b>${fs.stats.released}</b></div><div><small>Round-up this year</small><b>${$(fs.roundUpYtd)}</b></div></div>
+      ${P.slider(s, 'conservation', 'Field-conservation budget / yr', 0, ZG.zoo(s).refs.conservation * 3)}
+      <p class="sub">Each partner is fully funded at about ${$(F.target(s))}/yr.</p>
+      <div class="actions">${btn(fs.roundUp ? '✅ “Round Up for Wildlife” at checkout: on' : '⬜ “Round Up for Wildlife” at checkout: off', 'fieldRound', {}, 'sm ' + (fs.roundUp ? 'on' : ''))}<span class="sub">Guests round up their purchase and the change goes to your partners.</span></div></div>
+      ${cards ? `<h3>Your partners</h3>${cards}` : ''}
+      ${rep ? `<h3>Field reports</h3><ul class="news">${rep}</ul>` : ''}
+      <h3>Potential partners</h3>${avail}`;
+  };
+
+  // =====================================================================
   // GROW THE ZOO (strategic plan, land, second site)
   // =====================================================================
   const habitatsList = P.tab_habitats;
@@ -442,6 +532,7 @@
   A.reqCancel = (s, d) => ZG.Requests.cancel(s, +d.id);
   A.renameStart = (s, d) => {
     P.ui.renaming = +d.hab;
+    P.ui.renameDraft = s.habitatsById[+d.hab] ? s.habitatsById[+d.hab].name : '';
     setTimeout(() => {
       const i = document.getElementById('rename-input');
       if (i) (i.focus(), i.select());
@@ -450,12 +541,13 @@
   };
   A.renameCancel = () => {
     P.ui.renaming = null;
+    P.ui.renameDraft = null;
     return null;
   };
   A.renameSave = (s, d) => {
     const i = document.getElementById('rename-input');
-    const r = ZG.Habitats.rename(s, +d.hab, i ? i.value : '');
-    if (r.ok) P.ui.renaming = null;
+    const r = ZG.Habitats.rename(s, +d.hab, i ? i.value : P.ui.renameDraft);
+    if (r.ok) (P.ui.renaming = null), (P.ui.renameDraft = null);
     return r;
   };
   A.planPick = (s, d) => {
@@ -484,6 +576,21 @@
   A.reserveCover = (s) => {
     s.reserve.autoCover = !s.reserve.autoCover;
     return { ok: true, msg: `Auto-cover ${s.reserve.autoCover ? 'on' : 'off'}.` };
+  };
+  A.fieldJoin = (s, d) => ZG.Field.join(s, d.id);
+  A.fieldLeave = (s, d) => (ZG.App.confirm('fl' + d.id, 'End this partnership?') ? ZG.Field.leave(s, d.id) : null);
+  A.fieldProj = (s, d) => ZG.Field.start(s, d.id, d.type);
+  A.fieldRound = (s) => {
+    s.field.roundUp = !s.field.roundUp;
+    return { ok: true, msg: s.field.roundUp ? 'Round Up for Wildlife is on at every register.' : 'Round-up turned off.' };
+  };
+  A.reqForSp = (s, d) => {
+    const sp = ZG.SPECIES[d.sp];
+    const h = s.habitats.find((x) => !x.construction && sp.biomes.includes(x.biome) && !s.animals.some((a) => a.hab === x.id)) || s.habitats.find((x) => sp.biomes.includes(x.biome));
+    P.ui.req = { hab: h ? h.id : null, sp: d.sp, m: 1, f: 1 };
+    P.ui.tab = 'animals';
+    P.ui.scrollTo = 'req-card';
+    return h ? null : { ok: false, msg: `You need a ${sp.biomes.map((b) => ZG.BIOMES[b].name).join(' or ')} habitat first.` };
   };
   A.treat = (s, d) => ZG.Animals.treat(s, +d.aid, d.lvl);
 

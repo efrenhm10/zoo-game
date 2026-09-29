@@ -8,9 +8,9 @@
   const OBJ = {
     passInsp: { id: 'pass_insp', text: 'Pass an AZA accreditation inspection', check: (s) => s.stats.inspectionsPassed >= 1 },
     habitat: { id: 'habitat', text: 'Design, build and open a brand-new habitat', check: (s) => s.stats.habitatsOpened >= 1 },
-    ssp: (n) => ({ id: 'ssp' + n, text: `Welcome ${n} SSP-recommended births`, check: (s) => s.stats.sspBirths >= n }),
-    backlog: (p) => ({ id: 'backlog', text: `Cut the deferred-maintenance backlog by ${Math.round(p * 100)}%`, check: backlogCut(p) }),
-    members: (n) => ({ id: 'members', text: `Grow membership past ${n.toLocaleString()} households`, check: (s) => s.members >= n }),
+    ssp: (n) => ({ id: 'ssp' + n, text: `Welcome ${n} healthy births of SSP species`, check: (s) => s.stats.sspBirths >= n, prog: (s) => [s.stats.sspBirths, n] }),
+    backlog: (p) => ({ id: 'backlog', text: `Cut the deferred-maintenance backlog by ${Math.round(p * 100)}%`, check: backlogCut(p), prog: (s) => [Math.max(0, Math.round((1 - ZG.Infra.backlog(s) / Math.max(1, s.stats.backlogStart)) * 100)), Math.round(p * 100), '%'] }),
+    members: (n) => ({ id: 'members', text: `Grow membership past ${n.toLocaleString()} households`, check: (s) => s.members >= n, prog: (s) => [s.members, n] }),
     pandaCub: { id: 'panda', text: 'Welcome a giant panda cub', check: (s) => s.stats.pandaCubs >= 1 },
   };
 
@@ -187,10 +187,10 @@
         { name: 'Wortham World of Primates: Orangutans', biome: 'tropical', sp: [['orangutan', 1, 2]] },
         { name: 'Texas Wetlands', biome: 'wetland', sp: [['alligator', 2, 3]] },
       ],
-      objectives: [{ id: 'eleph', text: 'Welcome 2 elephant calves (and keep them safe from EEHV)', check: (s) => s.stats.elephantBirths >= 2 },
+      objectives: [{ id: 'eleph', text: 'Welcome 2 elephant calves (and keep them safe from EEHV)', check: (s) => s.stats.elephantBirths >= 2, prog: (s) => [s.stats.elephantBirths, 2] },
         { id: 'contract', text: 'Renew the City management agreement', check: (s) => !!s.stats.contractRenewed },
         { id: 'campaign', text: 'Complete a capital campaign', check: (s) => s.stats.campaignsDone >= 1 },
-        { id: 'surplus', text: 'Finish 3 years with an operating surplus', check: (s) => s.stats.surplusYears >= 3 }, OBJ.passInsp],
+        { id: 'surplus', text: 'Finish 3 years with an operating surplus', check: (s) => s.stats.surplusYears >= 3, prog: (s) => [s.stats.surplusYears, 3] }, OBJ.passInsp],
     },
 
     cheyenne: {
@@ -234,8 +234,8 @@
         { name: 'Primate World: Gorillas', biome: 'forest', climate: 'heated', sp: [['gorilla', 1, 3]] },
         { name: 'Primate World: Orangutans', biome: 'forest', climate: 'heated', sp: [['sumatran_orangutan', 1, 2]] },
       ],
-      objectives: [{ id: 'giraffe', text: 'Welcome 6 giraffe calves', check: (s) => s.stats.giraffeBirths >= 6 },
-        { id: 'reserve', text: 'Build a $10M operating reserve', check: (s) => s.cash >= 10000000 }, OBJ.members(55000), OBJ.habitat, OBJ.ssp(4)],
+      objectives: [{ id: 'giraffe', text: 'Welcome 6 giraffe calves', check: (s) => s.stats.giraffeBirths >= 6, prog: (s) => [s.stats.giraffeBirths, 6] },
+        { id: 'reserve', text: 'Build a $10M operating reserve (cash + rainy-day fund)', check: (s) => s.cash + (s.reserve ? s.reserve.bal : 0) >= 10000000, prog: (s) => [Math.round((s.cash + (s.reserve ? s.reserve.bal : 0)) / 1e5) / 10, 10, 'M'] }, OBJ.members(55000), OBJ.habitat, OBJ.ssp(4)],
     },
   };
   ZG.ZOO_ORDER = ['honolulu', 'sandiego', 'national', 'houston', 'cheyenne'];

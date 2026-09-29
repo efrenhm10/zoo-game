@@ -76,7 +76,7 @@
     ZG.Reserve.afterEvent(s, e.id, v.title || '', c.cost || 0);
     s.log.unshift({ day: s.day, title: v.title, choice: c.label, result, icon: v.icon || '📌' });
     if (s.log.length > 120) s.log.pop();
-    return { title: v.title, icon: v.icon, result, choice: c.label };
+    return { title: v.title, icon: v.icon, result, choice: c.label, open: c.open, sub: c.sub };
   };
   EV.autoChoose = function (s) {
     const v = EV.view(s);
@@ -128,6 +128,22 @@
   def('zoo_event_result', {
     cat: 'guest',
     make: (s, c) => ({ icon: c.icon, title: c.title, text: c.html, choices: [{ label: 'OK', apply: () => '' }] }),
+  });
+
+  def('ssp_plan', {
+    cat: 'aza',
+    make: (s, c) => {
+      const open = s.ssp.recs.filter((r) => r.status === 'open');
+      if (!open.length) return null;
+      const icon = { breed: '💞 Breed', nobreed: '🚫 Do not breed', send: '📤 Send out', receive: '📥 Receive', hold: '🏠 Hold space for' };
+      const rows = open.map((r) => `<li><b>${icon[r.type]}</b> ${SP(r.sp).name}: ${U.esc(r.text)} <small>(respond by ${U.fmtDate(r.deadline)})</small></li>`).join('');
+      return { icon: '🧬', title: `${c.year} SSP Breeding & Transfer Plans`,
+        text: `<p>Species Survival Plan coordinators manage each species as one North American population, pairing animals across zoos to keep them genetically healthy. This year they have <b>${open.length} recommendation${open.length > 1 ? 's' : ''}</b> for you:</p><ul>${rows}</ul><p class="sub">Accepting earns AZA standing. Declining is allowed but noticed. Births from recommended pairings earn the biggest bonus.</p>`,
+        choices: [
+          { label: 'Review and respond now', detail: 'Opens Conservation → SSP plans', open: 'conservation', sub: 'ssp', apply: () => '' },
+          { label: 'Later', apply: () => '' },
+        ] };
+    },
   });
 
   def('intro', {

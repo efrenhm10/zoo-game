@@ -316,7 +316,7 @@
     }
     const lost = n - babies.length;
     s.stats.births += babies.length;
-    if (mom.sp === 'giraffe') s.stats.giraffeBirths += babies.length;
+    if (mom.sp.includes('giraffe')) s.stats.giraffeBirths += babies.length;
     if (mom.sp.includes('elephant')) s.stats.elephantBirths += babies.length;
     if (mom.sp === 'giant_panda') s.stats.pandaCubs += babies.length;
     ZG.fx(s, 'birth', mom.hab);
