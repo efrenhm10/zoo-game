@@ -32,6 +32,19 @@
     }
   };
 
+  // Short description of the saved game for the title screen.
+  App.saveInfo = function () {
+    try {
+      const str = localStorage.getItem(SAVE_KEY);
+      if (!str) return null;
+      const s = JSON.parse(str);
+      const Z = ZG.ZOOS[s.zooId];
+      return `${Z ? Z.name : 'Your zoo'} · ${U.fmtDate(s.day)} · Director ${s.director.name}`;
+    } catch (e) {
+      return null;
+    }
+  };
+
   App.boot = function () {
     for (const id of ['start-screen', 'game', 'map', 'overlay', 'panel', 'window', 'wintitle', 'toolbar', 'statsbar', 'controls', 'clock', 'badge', 'ticker', 'modal-root', 'tooltip', 'toast', 'walkhud'])
       el[id] = document.getElementById(id);

@@ -40,7 +40,7 @@
       <p class="tag">Run a real American zoo — the budgets, the politics, the animals, the disasters.</p>
       <div class="big-actions">
         <button class="btn primary big" data-c="next">Start a new career</button>
-        ${has ? '<button class="btn big" data-c="continue">Continue saved game</button>' : ''}
+        ${has ? `<button class="btn big" data-c="continue">▶ Continue saved game${ZG.App.saveInfo() ? `<small>${esc(ZG.App.saveInfo())}</small>` : ''}</button>` : ''}
       </div>
       <p class="sub">Choose from Honolulu, San Diego, the Smithsonian's National Zoo, Houston, and Cheyenne Mountain.</p>
     </div>`;

@@ -68,7 +68,9 @@ h4 { margin: 0.9em 0 0.3em; font-size: 0.92rem; font-weight: 800; }
 .roundel { display: flex; flex-direction: column; align-items: center; animation: pop 0.35s; }
 .roundel .banner { font-size: 0.78rem; }
 .big-actions { display: flex; gap: 12px; justify-content: center; margin: 26px 0 14px; flex-wrap: wrap; }
-.big-actions .btn:not(.primary) { background: var(--cream); }
+.big-actions .btn:not(.primary) { background: var(--cream); color: var(--olive-dark); border-color: var(--cream2); }
+.big-actions .btn small { display: block; font-size: 0.78rem; font-weight: 700; color: var(--muted); margin-top: 2px; }
+.big-actions .btn:not(.primary):hover { background: #fff; color: var(--ink); }
 .stepper { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
 .stepper span { padding: 4px 14px; border-radius: 20px; background: var(--cream2); color: var(--muted); font-size: 0.85rem; font-weight: 800; }
 .stepper span.cur { background: var(--pink); color: #fff; }
