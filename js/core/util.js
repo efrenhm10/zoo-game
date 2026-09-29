@@ -64,6 +64,13 @@
   U.esc = (str) =>
     String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+  // Sex badges: a colored ♂ / ♀ that is easy to spot, and "2♂ 1♀" counts for a group.
+  U.sexTag = (sex) => (sex === 'M' ? '<span class="sex m" title="Male">♂ male</span>' : '<span class="sex f" title="Female">♀ female</span>');
+  U.sexIcon = (sex) => (sex === 'M' ? '<span class="sex m" title="Male">♂</span>' : '<span class="sex f" title="Female">♀</span>');
+  U.sexCount = (list) => {
+    const m = list.filter((a) => a.sex === 'M').length;
+    return `<span class="sexcount"><span class="sex m">${m}♂</span> <span class="sex f">${list.length - m}♀</span></span>`;
+  };
   U.MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   U.MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   U.DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

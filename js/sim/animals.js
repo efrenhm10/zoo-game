@@ -83,6 +83,17 @@
   };
 
   // ---------- Welfare ----------
+  // Species where all-male (bachelor) groups or male coalitions are normal.
+  A.BACHELOR_OK = new Set(['cheetah', 'gorilla', 'african_elephant', 'asian_elephant', 'giraffe', 'masai_giraffe', 'grevys_zebra', 'plains_zebra', 'bison', 'african_buffalo', 'greater_kudu', 'bongo', 'alpaca', 'alpine_goat', 'alpine_ibex', 'donkey', 'bactrian_camel', 'ostrich', 'red_kangaroo', 'sea_lion', 'gray_seal', 'galapagos_tortoise', 'aldabra_tortoise', 'flamingo', 'chilean_flamingo', 'african_penguin', 'humboldt_penguin', 'nene', 'warthog', 'hippo', 'alligator', 'nile_crocodile', 'lion']);
+  // Adult males beyond what the group tolerates (0 when fine).
+  A.extraMales = function (s, list, spId) {
+    if (A.BACHELOR_OK.has(spId) || ZG.SPECIES[spId].group[0] >= 10) return 0;
+    const sp = ZG.SPECIES[spId];
+    const m = list.filter((a) => a.sex === 'M' && a.age >= sp.mature * 365).length;
+    const f = list.filter((a) => a.sex === 'F' && a.age >= sp.mature * 365).length;
+    return m >= 2 && m > f ? m - Math.max(1, f) : 0;
+  };
+
   A.habitatFactors = function (s, h) {
     const temp = s.today ? s.today.temp : 70;
     const animals = A.inHab(s, h.id);
@@ -111,13 +122,15 @@
       let social = 100;
       if (n < sp.group[0]) social = 100 - (sp.group[0] - n) * (sp.group[0] <= 2 ? 15 : 12);
       if (n > sp.group[1]) social = 100 - (n - sp.group[1]) * 6;
+      const extra = A.extraMales(s, bySp[id], id);
+      if (extra) social -= 15 * extra; // rival adult males fight and stress each other
       social = U.clamp(social, 20, 100);
       const cond = h.condition;
       // Core welfare, then multiplicative penalties for wrong biome/climate/mixing.
       let w = 0.15 * space + 0.1 * social + 0.45 * complexity + 0.3 * care - 3;
       w *= (biome === 100 ? 1 : 0.82) * (0.55 + 0.45 * climate / 100) * (mixOk ? 1 : 0.75);
       w = Math.min(100, w + ZG.Design.welfareBonus(h, id));
-      per[id] = { n, biome, climate, social, w, tempDiff: diff };
+      per[id] = { n, biome, climate, social, w, tempDiff: diff, extraMales: extra };
       void cond;
     }
     return { spaceRatio, space, mixOk, care, complexity, per, count: animals.length };

@@ -114,7 +114,21 @@
             `Today's ${s.today.temp}°F is ${Math.round(x.tempDiff)}°F ${hot ? 'above' : 'below'} what ${sp.name}s tolerate (${sp.climate[0]}–${sp.climate[1]}°F).`,
             h.climate === 'none' ? [fix(`Add a ${type} building (${$(cost)})`, 'climate', { hab: h.id, type })] : []);
         }
-        if (x.social < 90) {
+        if (x.extraMales) {
+          const list = animals.filter((a) => a.sp === id);
+          const males = list.filter((a) => a.sex === 'M');
+          const gvRank = { Low: 0, Medium: 1, High: 2 };
+          const spare = males.filter((a) => !a.star).sort((a, b) => (gvRank[a.gv] || 1) - (gvRank[b.gv] || 1) || b.age - a.age)[0] || males[0];
+          const fixes = [];
+          const home = D.bestHome(s, id, h.id);
+          if (home) fixes.push(fix(`Move ${spare.name} (♂) to ${home.name}`, 'moveAnimal', { aid: spare.id, hab: home.id }));
+          fixes.push(fix(`Transfer ${spare.name} (♂) to another zoo`, 'sendOut', { aid: spare.id }));
+          if (ZG.Requests.room(s, h, id) >= 1 && sp.program !== 'Loan') fixes.push(fix(`Request a female ${sp.name}`, 'reqQuick', { hab: h.id, sp: id, m: 0, f: 1 }));
+          const f = list.length - males.length;
+          add(x.extraMales >= 2 || f === 0 ? 'bad' : 'warn', '♂', 'Too many males',
+            `${males.length} males and ${f} female${f === 1 ? '' : 's'}. Adult male ${sp.name}s compete and fight, and that stresses the whole group. Keep one breeding male${f ? ' for the females' : ''} and move or transfer the others.`, fixes);
+        }
+        if (x.social < 90 && !x.extraMales) {
           const small = x.n < sp.group[0];
           const fixes = [];
           if (small && sp.program !== 'Loan') {

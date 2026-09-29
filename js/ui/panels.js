@@ -156,7 +156,7 @@
         if (x.biome < 100) notes.push('wrong biome');
         if (x.climate < 80) notes.push(`climate stress (${Math.round(x.tempDiff)}°F outside range)`);
         if (x.social < 90) notes.push(x.n < sp.group[0] ? `group too small (ideal ${sp.group[0]}–${sp.group[1]})` : 'group too large');
-        html += `<p class="sprow">${ZG.Portraits.img(id, 'portrait xs')} <b>${sp.name}</b> ×${x.n} — habitat welfare <b class="${cls(x.w)}">${Math.round(x.w)}</b>${notes.length ? ` <span class="warn">(${notes.join(', ')})</span>` : ''}</p>`;
+        html += `<p class="sprow">${ZG.Portraits.img(id, 'portrait xs')} <b>${sp.name}</b> ×${x.n} ${U.sexCount(animals.filter((a) => a.sp === id))} — habitat welfare <b class="${cls(x.w)}">${Math.round(x.w)}</b>${notes.length ? ` <span class="warn">(${notes.join(', ')})</span>` : ''}</p>`;
       }
     }
     html += P.addAnimals(s, h);
@@ -199,7 +199,7 @@
         const acts = [];
         if (!x.treated) acts.push(btn(`Start treatment (${$(cost)})`, 'treat', { aid: a.id, lvl: 'standard' }, 'sm primary'));
         if (plan !== 'aggressive' && x.sev >= 2) acts.push(btn(`Bring in specialists (${$(Math.round(cost * 2.4))})`, 'treat', { aid: a.id, lvl: 'aggressive' }, 'sm'));
-        return `<div class="patient sev${x.sev}"><div class="offer-top">${ZG.Portraits.img(a.sp, 'portrait sm')}<div><b>${esc(a.name)}</b> <small>${sp.name} · ${a.sex === 'M' ? '♂' : '♀'} · ${U.ageStr(a.age)}${a.star ? ' · ⭐' : ''}</small><br>
+        return `<div class="patient sev${x.sev}"><div class="offer-top">${ZG.Portraits.img(a.sp, 'portrait sm')}<div><b>${esc(a.name)}</b> ${U.sexIcon(a.sex)} <small>${sp.name} · ${U.ageStr(a.age)}${a.star ? ' · ⭐' : ''}</small><br>
           <b>${esc(x.name)}</b> <span class="pill sev${x.sev}">${SEV[x.sev - 1]}</span></div></div>
           <div class="mini2"><span>Health</span>${bar(a.health)}${prog != null ? `<span>Recovery</span>${bar(prog)}` : ''}</div>
           <small>${PLAN[plan]} · outlook ${outlook} · ~${x.days} days to go · ${a.loc === 'quarantine' ? 'in quarantine' : `treated in ${esc(habName(s, a.hab))}`}${x.since != null ? ` · since ${U.fmtDate(x.since)}` : ''}</small>
@@ -261,7 +261,7 @@
       const moving = P.ui.moveFor === a.id;
       return `<div class="acard2">
         <div class="round">${ZG.Portraits.img(a.sp, 'portrait md')}<span class="banner">${esc(a.name)}</span></div>
-        <div class="ainfo"><small>${sp.name} · ${a.sex === 'M' ? '♂' : '♀'} · ${U.ageStr(a.age)} · GV ${a.gv} ${flags}</small>
+        <div class="ainfo">${U.sexTag(a.sex)} <small>${sp.name} · ${U.ageStr(a.age)} · GV ${a.gv} ${flags}</small>
           <div class="mini2"><span>Welfare</span>${bar(a.welfare)}<span>Health</span>${bar(a.health)}</div>
           <div class="acts">${breedable ? btn(a.contra ? '💊 Contracepted' : '💞 Breeding', 'contra', { aid: a.id }, 'sm ' + (a.contra ? '' : 'on')) : ''}
           ${moving ? `<select data-move="${a.id}"><option value="">Move to…</option>${habs.filter((h) => h.id !== a.hab).map((h) => `<option value="${h.id}">${esc(h.name)}</option>`).join('')}</select>` : btn('Move', 'moveOpen', { aid: a.id }, 'sm')}
@@ -271,7 +271,10 @@
     if (byHab.q) html += `<h3>🏥 Quarantine</h3><div class="agrid">${byHab.q.map(row).join('')}</div>`;
     for (const h of habs) {
       const list = byHab[h.id];
-      html += `<h3 data-act="select" data-plot="${h.plot}" class="click">${esc(h.name)} <small>(${list ? list.length : 0})</small></h3>`;
+      const bySp = {};
+      for (const a of list || []) (bySp[a.sp] = bySp[a.sp] || []).push(a);
+      const mix = Object.entries(bySp).map(([id, l]) => `${spn(id).name} ${U.sexCount(l)}`).join(' · ');
+      html += `<h3 data-act="select" data-plot="${h.plot}" class="click">${esc(h.name)} <small>(${list ? list.length : 0})</small></h3>${mix ? `<p class="sub groupmix">${mix}</p>` : ''}`;
       html += list ? `<div class="agrid">${list.map(row).join('')}</div>` : '<p class="sub">Empty.</p>';
     }
     html += P.market(s);
@@ -295,7 +298,7 @@
         const sp = spn(id);
         const n = res.filter((a) => a.sp === id).length;
         const room = RQ.room(s, h, id);
-        return `<div class="addrow">${ZG.Portraits.img(id, 'portrait xs')}<div class="addinfo"><b>${sp.name}</b> <small>×${n} now · ${room ? `room for <b>${room}</b> more` : '<span class="bad">no room</span>'} · natural group ${sp.group[0]}–${sp.group[1]}</small></div>
+        return `<div class="addrow">${ZG.Portraits.img(id, 'portrait xs')}<div class="addinfo"><b>${sp.name}</b> ${U.sexCount(res.filter((a) => a.sp === id))} <small>×${n} now · ${room ? `room for <b>${room}</b> more` : '<span class="bad">no room</span>'} · natural group ${sp.group[0]}–${sp.group[1]}</small></div>
           <div class="actions">${sp.program === 'Loan' ? '<small class="sub">Loan animals only</small>' : quick(id, 0, 1) + quick(id, 1, 0) + (room >= 2 ? quick(id, 0, 2) : '') + (sp.group[0] >= 6 && room >= 6 ? quick(id, 2, 4) : '')}</div></div>`;
       })
       .join('');
@@ -347,7 +350,7 @@
     if (st.sp) {
       const e = RQ.estimate(s, st.sp, st.m, st.f, st.hab);
       est = e.ok
-        ? `<p>Chance of approval: <b class="${e.odds >= 0.6 ? 'good' : e.odds >= 0.35 ? 'warn' : 'bad'}">${Math.round(e.odds * 100)}%</b> · answer in ${e.wait} · transport about <b>${$(e.cost)}</b> when they arrive (no purchase price: it's a breeding loan)</p>${e.notes.length ? `<ul class="bnotes">${e.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}<div class="actions">${btn('📨 Send request', 'reqSend', {}, 'primary')}</div>`
+        ? `<p>${h ? `${esc(h.name)} now has <b>${e.sexNow}</b> ${spn(st.sp).name}s. After this request: <b>${e.sexAfter}</b>.<br>` : ''}Chance of approval: <b class="${e.odds >= 0.6 ? 'good' : e.odds >= 0.35 ? 'warn' : 'bad'}">${Math.round(e.odds * 100)}%</b> · answer in ${e.wait} · transport about <b>${$(e.cost)}</b> when they arrive (no purchase price: it's a breeding loan)</p>${e.notes.length ? `<ul class="bnotes">${e.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}<div class="actions">${btn('📨 Send request', 'reqSend', {}, 'primary')}</div>`
         : `<p class="bad">⛔ ${esc(e.block)}</p>`;
     }
     const open = s.ssp.requests
@@ -373,7 +376,7 @@
         const sp = spn(o.sp);
         const good = habs.filter((h) => sp.biomes.includes(h.biome));
         const opts = habs.map((h) => `<option value="${h.id}" ${good.includes(h) && s.animals.some((a) => a.hab === h.id && a.sp === o.sp) ? 'selected' : ''}>${sp.biomes.includes(h.biome) ? '✓ ' : '✗ '}${esc(h.name)}</option>`).join('');
-        return `<div class="card offer"><div class="offer-top">${ZG.Portraits.img(o.sp, 'portrait sm')}<div><b>${o.count > 1 ? o.count + '× ' : ''}${sp.name}</b> <small>${o.count === 1 ? (o.sex === 'M' ? '♂' : '♀') + ' · ' : ''}${U.ageStr(o.age)} · GV ${o.gv} · ${sp.iucn}${sp.program === 'SSP' ? ' · SSP' : ''}</small><br><small>From ${esc(o.from)} · ${o.kind === 'rescue' ? 'rescue' : 'AZA loan (no purchase price)'} · expires ${U.fmtDate(o.expires)}</small></div></div>
+        return `<div class="card offer"><div class="offer-top">${ZG.Portraits.img(o.sp, 'portrait sm')}<div><b>${o.count > 1 ? o.count + '× ' : ''}${sp.name}</b> ${o.count === 1 ? U.sexTag(o.sex) + ' ' : ''}<small>${U.ageStr(o.age)} · GV ${o.gv} · ${sp.iucn}${sp.program === 'SSP' ? ' · SSP' : ''}</small><br><small>From ${esc(o.from)} · ${o.kind === 'rescue' ? 'rescue' : 'AZA loan (no purchase price)'} · expires ${U.fmtDate(o.expires)}</small></div></div>
           <div class="actions"><select data-acq="${o.id}"><option value="">Choose habitat…</option>${opts}</select>${btn(`Accept (${$(o.cost)} transport)`, 'acquire', { oid: o.id }, 'sm primary')}</div></div>`;
       })
       .join('');

@@ -391,3 +391,12 @@ tr.lvl-warn td:first-child { box-shadow: inset 4px 0 0 var(--warn); }
 .addrow .addinfo { flex: 1; min-width: 150px; font-size: 0.85rem; }
 .addrow .actions { margin: 0; }
 .addrow .btn small { opacity: 0.75; font-weight: 700; }
+
+/* ---------------- Sex badges ---------------- */
+.sex { font-weight: 900; white-space: nowrap; }
+.sex.m { color: #2f6fb5; }
+.sex.f { color: #cf4a82; }
+.ainfo > .sex, .acard .sex, .offer-top .sex { display: inline-block; font-size: 0.74rem; padding: 0 7px; border-radius: 9px; background: #e8f0fa; }
+.ainfo > .sex.f, .acard .sex.f, .offer-top .sex.f { background: #fbe9f1; }
+.sexcount { font-size: 0.8rem; margin: 0 2px; }
+.groupmix { margin: -4px 0 6px; }

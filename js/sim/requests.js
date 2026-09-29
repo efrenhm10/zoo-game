@@ -47,6 +47,15 @@
     const hold = s.ssp.recs.find((r) => r.type === 'hold' && r.sp === spId && (r.status === 'open' || r.status === 'accepted'));
     if (hold) (o += 0.35), out.notes.push('✅ The SSP has asked zoos to hold space for this species. They want to say yes.');
     const have = res.filter((a) => a.sp === spId);
+    {
+      const m0 = have.filter((a) => a.sex === 'M').length, f0 = have.length - m0;
+      const m1 = m0 + (+males || 0), f1 = f0 + (+females || 0);
+      out.sexNow = `${m0}♂ ${f0}♀`;
+      out.sexAfter = `${m1}♂ ${f1}♀`;
+      const tolerant = ZG.Animals.BACHELOR_OK.has(spId) || sp.group[0] >= 10;
+      if (+males > 0 && f1 === 0 && sp.breeds !== false) out.notes.push(`⚠️ You'd have ${m1} male${m1 > 1 ? 's' : ''} and no females, so no breeding.`);
+      if (!tolerant && m1 >= 2 && m1 > f1) (o -= 0.12), out.notes.push(`⛔ That makes ${m1} males to ${f1} female${f1 === 1 ? '' : 's'}. Adult male ${sp.name}s fight; the coordinator will question it, and welfare will drop.`);
+    }
     if (have.length) {
       const m = have.filter((a) => a.sex === 'M').length, f = have.length - m;
       if ((m === 0 && males > 0) || (f === 0 && females > 0)) (o += 0.08), out.notes.push('💞 This would give your animals a potential mate.');

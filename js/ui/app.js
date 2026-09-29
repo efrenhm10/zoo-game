@@ -280,7 +280,7 @@
           if (a.loc === 'quarantine') notes.push('In quarantine at the hospital');
           if (a.welfare < 55) notes.push('Keepers are worried about stress behaviors');
           else if (a.welfare > 82) notes.push('Thriving');
-          return `<div class="acard">${ZG.Portraits.img(a.sp, 'portrait md')}<div><b>${esc(a.name)}</b> ${a.sex === 'M' ? '♂' : '♀'} <small>${sp.name}, ${U.ageStr(a.age)}</small><br><i>${a.loc === 'hab' ? 'Currently ' + esc(a.mood) : 'Not on exhibit'}</i><br><small>Welfare ${Math.round(a.welfare)} · Health ${Math.round(a.health)} · ${sp.iucn} ${sp.program === 'SSP' ? '· SSP' : ''}</small>${notes.length ? `<br><small>${notes.join(' · ')}</small>` : ''}</div></div>`;
+          return `<div class="acard">${ZG.Portraits.img(a.sp, 'portrait md')}<div><b>${esc(a.name)}</b> ${U.sexTag(a.sex)} <small>${sp.name}, ${U.ageStr(a.age)}</small><br><i>${a.loc === 'hab' ? 'Currently ' + esc(a.mood) : 'Not on exhibit'}</i><br><small>Welfare ${Math.round(a.welfare)} · Health ${Math.round(a.health)} · ${sp.iucn} ${sp.program === 'SSP' ? '· SSP' : ''}</small>${notes.length ? `<br><small>${notes.join(' · ')}</small>` : ''}</div></div>`;
         })
         .join('');
       const f = s._hf && s._hf[h.id];
