@@ -81,11 +81,14 @@ Each concept shows its cost, build time, guest appeal, welfare boost, upkeep, ca
 
 - **Camera (manage mode).** Drag to pan, right-drag (or Shift+drag) to rotate, scroll to zoom, and use `WASD`/arrows to move and `Q`/`E` to rotate. Click a habitat to manage it.
 - **Walk the grounds.** Press `Tab` (or 🚶 Walk) to control your avatar with `WASD`/arrow keys (hold `Shift` to jog), or click where you want to go. Stand at a habitat and press `E` to observe each animal: its name, age and what it's doing right now. You'll also hear from keepers and see guest thought bubbles that reflect the actual simulation ("$40 for tickets?!", "the restrooms are closed again", "a baby giraffe!").
+- **Request animals from the AZA.** Pick a habitat (including one still under construction), a species and how many males and females. You see the odds, the transport cost and the reasons before you send it. Coordinators answer in one to three months: approved, partly approved, waitlisted or declined, with a reason. Habitats have "Request more animals" and "Reserve animals for opening day" buttons.
+- **Animal hospital.** Click the hospital to see every patient: what they have, how serious it is, whether they're on standard treatment, specialist care or only being monitored, their health and recovery, and days to go. You can start treatment or bring in specialists there, and see quarantine, expecting mothers and newborn checks.
 - **Collection & AZA Species Survival Plans.** Animals are on contraception by default. Each February the SSP publishes Breeding & Transfer Plans: breed this pair, send this animal to another zoo, receive a mate, do *not* breed, or hold space for a species. Following them earns AZA standing; unplanned or inbred births cost you. Accredited zoos move animals on breeding loans rather than buying them, so you pay transport and quarantine (60 days in Hawaiʻi).
 - **Animal welfare** comes from space, social group size, habitat quality, biome, climate (including heated or chilled buildings) and keeper care. Animals age, get sick, give birth (including maternal rejection and hand-rearing dilemmas), and die.
 - **Habitat problems, explained.** Any habitat in the red tells you exactly why: worn out, overcrowded, species clash, short on keeper care, wrong landscape, too hot or cold, lonely or too big a group, sick animals, dated theming. The fixes are offered right there, with prices: renovate, hire keepers, restore enrichment, move an animal to a habitat with room, bring in a companion, re-landscape, add a heated or chilled building.
 - **Habitats & construction.** Design new habitats on empty lots (biome, design tier, climate control), renovate worn ones, and improve theming. Public zoos build more slowly because of procurement.
 - **Infrastructure & deferred maintenance.** Water mains, power, life-support, the animal hospital, perimeter fence and more all decay. Underfund maintenance and they fail at emergency prices.
+- **A budget that answers back.** The Budget tab projects the next 12 months line by line. Drag any slider (admission, memberships, marketing, maintenance, enrichment, conservation) and the projected spending, revenue and surplus or deficit update as you drag, with plain-language warnings about the side effects. Cutting marketing, for example, saves money but costs visitors.
 - **Money.** Admission and membership pricing, marketing, maintenance, enrichment and conservation budgets; a restricted capital fund alongside operating cash; a credit line with interest; monthly and yearly P&L with charts.
 - **Staff.** Seven departments with workload-based requirements, hiring delays (months for city and federal zoos), morale, burnout and layoffs.
 - **Fundraising.** Cultivate major-gift prospects and make the ask, run capital campaigns, host galas, apply for grants, and weigh corporate sponsorships against reputational risk (an oil company or a palm-oil brand pays well, but at a cost).
@@ -115,6 +118,7 @@ js/sim/media.js       TV, radio, op-ed and livestream appearances
 js/sim/zooevents.js   adult nights, concerts, lights, fun runs, free days
 js/sim/merch.js       gift shop pricing, product lines, brand collaborations
 js/sim/diagnose.js    why a habitat is struggling and how to fix it
+js/sim/requests.js    requesting animals from AZA / SSP coordinators
 js/ui/portraits.js    roundel portraits rendered from the 3D models
 js/ui/                panels, creator, app (UI shell)
 js/vendor/            three.min.js (r149, MIT)

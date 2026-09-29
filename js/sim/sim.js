@@ -108,6 +108,7 @@
     if (!s.media) ZG.Media.init(s);
     if (!s.zooEvents) ZG.ZooEvents.init(s);
     if (!s.merch) ZG.Merch.init(s);
+    ZG.Requests.init(s);
   };
 
   Sim.reindex = function (s) {
@@ -121,6 +122,7 @@
     if (t.d === 1) Sim.monthStart(s, t);
     ZG.Econ.weather(s, t);
     ZG.ZooEvents.daily(s);
+    ZG.Requests.daily(s);
     if (s.closure) {
       s.closure.days--;
       if (s.closure.days <= 0) {

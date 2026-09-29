@@ -4,7 +4,7 @@
   const E = (ZG.Econ = {});
 
   E.REV = { admissions: 'Admissions', memberships: 'Memberships', concessions: 'Food & drink', retail: 'Gift shop & merch', parking: 'Parking', feeding: 'Animal encounters', government: 'Government funding', donations: 'Donations', grants: 'Grants', sponsorships: 'Sponsorships', events: 'Special events', other: 'Other' };
-  E.EXP = { salaries: 'Salaries & benefits', animalcare: 'Animal food & care', vetcare: 'Veterinary treatment', utilities: 'Utilities', maintenance: 'Routine maintenance', enrichment: 'Enrichment & supplies', marketing: 'Marketing', conservation: 'Field conservation', cogs: 'Cost of goods sold', overhead: 'Insurance & overhead', admin: 'Admin & recruiting', interest: 'Interest', emergency: 'Emergency repairs', transport: 'Animal transport', events: 'Event costs', capitalRepairs: 'Capital repairs', construction: 'Construction' };
+  E.EXP = { other: 'Other & irregular costs', salaries: 'Salaries & benefits', animalcare: 'Animal food & care', vetcare: 'Veterinary treatment', utilities: 'Utilities', maintenance: 'Routine maintenance', enrichment: 'Enrichment & supplies', marketing: 'Marketing', conservation: 'Field conservation', cogs: 'Cost of goods sold', overhead: 'Insurance & overhead', admin: 'Admin & recruiting', interest: 'Interest', emergency: 'Emergency repairs', transport: 'Animal transport', events: 'Event costs', capitalRepairs: 'Capital repairs', construction: 'Construction' };
   E.CAPEX = ['capitalRepairs', 'construction'];
 
   E.newLedger = () => ({ rev: {}, exp: {}, guests: 0, paying: 0 });
@@ -45,6 +45,70 @@
     for (const a of s.animals) animal += ZG.SPECIES[a.sp].food;
     const p = s.policy;
     return ZG.Staff.annualCost(s) + animal * (s.flags.foodMult || 1) + Z.utilities + Z.overhead * (s.flags.insuranceMult || 1) * ZG.mod(s, 'finance') + p.maintenance + p.enrichment + p.marketing + p.conservation;
+  };
+
+  // Twelve-month budget projection from current settings. `pol` overrides policy values
+  // (used while the player drags a slider) so spending and the bottom line react live.
+  E.project = function (s, pol) {
+    const Z = ZG.zoo(s);
+    const cur = s.policy;
+    const p = Object.assign({}, cur, pol || {});
+    const mk = (m) => {
+      const x = (m * ZG.mod(s, 'marketing')) / Math.max(1, Z.refs.marketing);
+      return 0.85 + 0.075 * Math.log2(1 + 3 * x);
+    };
+    const pf = (a) => (Z.priceLocked || !Z.refs.admission ? 1 : Math.pow(Math.max(1, a) / Z.refs.admission, -0.4));
+    const memberShare = U.clamp((s.members * Z.memberVisits) / Math.max(1, s.att.lastYear), 0, 0.6);
+    const baseGuests = s.att.lastYear * U.clamp(s.rep / Math.max(1, s.rep0), 0.7, 1.3) ** 0.5;
+    const guests = baseGuests * (mk(p.marketing) / mk(cur.marketing)) * (memberShare + (1 - memberShare) * (pf(p.admission) / pf(cur.admission)));
+    const paying = guests * (1 - memberShare);
+    const spendF = (0.75 + 0.35 * (s.satisfaction / 70)) * (0.8 + 0.2 * s.economy) * (0.7 + 0.3 * Math.min(1.1, ZG.Staff.ratio(s, 'guest')));
+    const rev = {}, exp = {};
+    if (!Z.priceLocked) rev.admissions = paying * p.admission * Z.yieldAdm;
+    const foodRev = guests * Z.perCap * spendF * (1 - ZG.Merch.RETAIL_SHARE) * (s.flags.pouringBoost || 1);
+    rev.concessions = foodRev;
+    const mm = s.merch ? ZG.Merch.mult(s) : { rev: 1, cogs: 1 };
+    let retail = guests * Z.perCap * spendF * ZG.Merch.RETAIL_SHARE * mm.rev;
+    if (s.merch && s.merch.lines.online) retail += s.members * 0.05 * 12 * 38;
+    rev.retail = retail;
+    if (Z.parkingPerCap) {
+      const pr = p.parkingFee / Math.max(1, Z.refs.parkingFee || 30);
+      rev.parking = guests * Z.parkingPerCap * pr * Math.pow(pr, -0.25);
+    }
+    let decks = 0;
+    for (const h of s.habitats) if (!h.construction && h.features && h.features.includes('feedingDeck')) decks++;
+    rev.feeding = guests * spendF * ((Z.giraffeFeed && s.animals.some((a) => a.sp === 'giraffe')) ? Z.giraffeFeed : 0) + guests * 0.3 * Math.min(2, decks) * spendF;
+    rev.memberships = s.members * p.memberPrice * (0.78 + 0.22 * Math.pow(Z.refs.memberPrice / Math.max(10, p.memberPrice), 0.9));
+    const dev = 0.6 + 0.4 * Math.min(1.5, ZG.Staff.ratio(s, 'development'));
+    let don = Z.donorBase * 0.55 * dev * U.clamp(s.rep / s.rep0, 0.5, 1.4) * Math.pow(s.economy, 1.5) * ZG.mod(s, 'fundraising');
+    if (s.donors) for (const d of s.donors) don += d.annual * U.clamp(0.3 + d.rel / 100, 0.35, 1.3) * s.economy;
+    if (s.partner) don += s.partner.annual * U.clamp(0.35 + s.partner.rel / 100, 0.4, 1.3);
+    rev.donations = don;
+    rev.government = s.gov.appropriation;
+    rev.sponsorships = s.sponsors.reduce((a, x) => a + x.amount, 0);
+
+    exp.salaries = ZG.Staff.annualCost(s);
+    let food = Z.supporting.cost;
+    for (const a of s.animals) food += ZG.SPECIES[a.sp].food * (a.age < 365 ? 0.4 : 1);
+    exp.animalcare = food * (s.flags.foodMult || 1);
+    let upkeep = 0;
+    for (const h of s.habitats) if (!h.construction) upkeep += ZG.Design.upkeep(h);
+    exp.utilities = Z.utilities * 1.08 + Math.min(0, upkeep) + s.habitats.filter((h) => h.climate !== 'none' && !h.construction).length * 60000 * (Z.utilities > 4e6 ? 1.6 : 1);
+    exp.maintenance = p.maintenance + Math.max(0, upkeep);
+    exp.enrichment = p.enrichment;
+    exp.marketing = p.marketing;
+    exp.conservation = p.conservation + (s.animals.some((a) => a.sp === 'giant_panda') ? (s.flags.pandaFee || 1e6) : 0);
+    exp.overhead = Z.overhead * (s.flags.insuranceMult || 1) * ZG.mod(s, 'finance');
+    exp.cogs = foodRev * Z.cogs + retail * Z.cogs * mm.cogs;
+    if (s.cash < 0) exp.interest = -s.cash * 0.085;
+    // Irregular costs (vet bills, emergencies, transport, events, admin): average of recent months.
+    const recent = s.ledger.months.slice(-12);
+    let irr = 0;
+    for (const m of recent) for (const k of ['vetcare', 'emergency', 'transport', 'events', 'admin', 'other']) irr += m.exp[k] || 0;
+    exp.other = recent.length ? (irr / recent.length) * 12 : ZG.Econ.annualBudget(s) * 0.02;
+    const revTotal = Object.values(rev).reduce((a, b) => a + b, 0);
+    const expTotal = Object.values(exp).reduce((a, b) => a + b, 0);
+    return { rev, exp, revTotal, expTotal, net: revTotal - expTotal, guests };
   };
 
   // ---------- Weather ----------

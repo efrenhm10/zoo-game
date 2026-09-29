@@ -221,15 +221,39 @@
     let sev = U.weighted(s, [1, 2, 3], (x) => [0.55, 0.32, 0.13][x - 1]);
     if (/EEHV|Cardiac|cancer|lymphoma|Tuberculosis/i.test(name)) sev = Math.max(sev, 2);
     if (/EEHV/.test(name) && a.age > 12 * 365) name = 'Foot abscess';
-    a.sick = { name, sev, days: U.ri(s, 10, 25) * sev, treated: false };
-    const cost = Math.round(sev * sev * (1500 + sp.food * 0.25) * ZG.zoo(s).costMult);
+    a.sick = { name, sev, days: U.ri(s, 10, 25) * sev, treated: false, since: s.day, plan: 'monitor' };
+    a.sick.total = a.sick.days;
+    const cost = A.treatCost(s, a);
     if (A.notable(a) && sev >= 2) {
       ZG.Events.queue(s, 'illness', { aid: a.id, cost });
     } else {
       a.sick.treated = true;
+      a.sick.plan = 'standard';
       ZG.Econ.spend(s, 'vetcare', cost);
       if (sev >= 2 || A.notable(a)) ZG.Sim.news(s, `${sp.emoji} Vet team treating ${a.name} (${sp.name}) for ${name.toLowerCase()} — ${U.money(cost)}.`, 'animal');
     }
+  };
+
+  A.treatCost = (s, a) => Math.round(a.sick.sev * a.sick.sev * (1500 + ZG.SPECIES[a.sp].food * 0.25) * ZG.zoo(s).costMult);
+
+  // Start treatment (standard) or escalate to specialists (aggressive) from the hospital chart.
+  A.treat = function (s, aid, level) {
+    const a = A.byId(s, aid);
+    if (!a || !a.sick) return { ok: false, msg: 'That animal is not sick.' };
+    const base = A.treatCost(s, a);
+    const cost = level === 'aggressive' ? Math.round(base * 2.4) : base;
+    if (!ZG.Econ.canAfford(s, cost)) return { ok: false, msg: `Not enough funds for ${U.money(cost)} of treatment.` };
+    ZG.Econ.spend(s, 'vetcare', cost);
+    a.sick.treated = true;
+    if (level === 'aggressive') {
+      if (a.sick.plan === 'aggressive') return { ok: false, msg: 'Already getting specialist care.' };
+      a.sick.plan = 'aggressive';
+      a.sick.sev = Math.max(1, a.sick.sev - 1);
+      a.sick.days = Math.ceil(a.sick.days * 0.6);
+      return { ok: true, msg: `Specialists brought in for ${a.name} (${U.money(cost)}). Prognosis improved.` };
+    }
+    a.sick.plan = 'standard';
+    return { ok: true, msg: `${a.name} is now being treated for ${a.sick.name.toLowerCase()} (${U.money(cost)}).` };
   };
 
   A.remove = function (s, a) {

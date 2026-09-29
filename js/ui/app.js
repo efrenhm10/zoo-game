@@ -193,6 +193,11 @@
     if (winOpen && t) el.wintitle.textContent = `${t.icon} ${t.name}`;
     renderTabs();
     renderPanel(true);
+    if (ZG.Panels.ui.scrollTo) {
+      const target = el.panel.querySelector('#' + ZG.Panels.ui.scrollTo);
+      ZG.Panels.ui.scrollTo = null;
+      if (target) el.panel.scrollTop = target.offsetTop - 10;
+    }
   };
 
   // ------------------------------------------------------------------
@@ -237,7 +242,8 @@
       const sick = s.animals.filter((a) => a.sick);
       body = `<p>The vet team (${s.staff.vets.n} people) is ${ZG.Staff.ratio(s, 'vets') < 0.9 ? 'visibly stretched thin' : 'busy but on top of things'}.</p>
         <p><b>In quarantine:</b> ${q.map((a) => `${ZG.SPECIES[a.sp].emoji} ${esc(a.name)} (${a.qDays} days left)`).join(', ') || 'nobody right now'}</p>
-        <p><b>Current patients:</b> ${sick.map((a) => `${ZG.SPECIES[a.sp].emoji} ${esc(a.name)} — ${esc(a.sick.name)}`).join('<br>') || 'none'}</p>`;
+        <p><b>Current patients:</b><br>${sick.map((a) => `${ZG.SPECIES[a.sp].emoji} <b>${esc(a.name)}</b> the ${ZG.SPECIES[a.sp].name}: ${esc(a.sick.name)} (${['mild', 'moderate', 'serious'][a.sick.sev - 1]}, ${a.sick.plan === 'aggressive' ? 'specialist care' : a.sick.treated ? 'being treated' : 'monitoring only'}, ~${a.sick.days} days to go)`).join('<br>') || 'none'}</p>
+        <button class="btn" data-manage="${plot.id}">Open the patient chart</button>`;
     } else if (plot.kind === 'cafe') {
       title = '🍔 Food Court';
       body = `<p>${ZG.Staff.ratio(s, 'guest') < 0.85 ? 'The lines are long and the trash cans are overflowing.' : 'Families are eating lunch at the umbrella tables.'}</p><p>Guest satisfaction today: <b>${Math.round(s.satisfaction)}</b>.</p>`;
@@ -418,6 +424,8 @@
         const lbl = el.panel.querySelector(`[data-lbl="${k}"]`);
         const v = +t.value;
         if (lbl) lbl.textContent = ['admission', 'memberPrice', 'parkingFee'].includes(k) ? `$${v}` : U.money(v);
+        const proj = el.panel.querySelector('#budget-proj');
+        if (proj && s) proj.innerHTML = ZG.Panels.budgetProjection(s, { [k]: v });
       }
       if (t.dataset && t.dataset.build) {
         ZG.Panels.ui.build[t.dataset.build] = t.value;
@@ -443,6 +451,13 @@
         renderPanel(true);
       }
       if (t.dataset && (t.dataset.acq || t.dataset.rechab)) t.blur();
+      if (t.dataset && t.dataset.req) {
+        const R = (ZG.Panels.ui.req = ZG.Panels.ui.req || {});
+        R[t.dataset.req] = t.dataset.req === 'sp' ? t.value : +t.value;
+        if (t.dataset.req === 'hab') R.sp = null;
+        t.blur();
+        renderPanel(true);
+      }
       if (t.dataset && t.dataset.mtopic) {
         ZG.Panels.ui.mediaTopic = t.value;
         t.blur();

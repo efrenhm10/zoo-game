@@ -226,7 +226,7 @@ ul.news small { color: var(--muted); margin-right: 5px; }
 .acard2 { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: center; background: var(--paper); border: 1.5px solid var(--line); border-radius: 12px; padding: 8px; }
 .acard2 .round { display: flex; flex-direction: column; align-items: center; }
 .acard2 .banner { font-size: 0.72rem; padding: 2px 8px 0; max-width: 96px; overflow: hidden; text-overflow: ellipsis; }
-.acard2 .mini2 { display: grid; grid-template-columns: 50px 1fr; gap: 0 6px; align-items: center; font-size: 0.72rem; font-weight: 700; color: var(--muted); margin: 3px 0; }
+.acard2 .mini2, .patient .mini2 { display: grid; grid-template-columns: 50px 1fr; gap: 0 6px; align-items: center; font-size: 0.72rem; font-weight: 700; color: var(--muted); margin: 3px 0; }
 .acard2 .acts { display: flex; flex-wrap: wrap; gap: 4px; }
 .acard2 select { font-size: 0.75rem; padding: 2px 4px; max-width: 150px; }
 
@@ -363,3 +363,24 @@ tr.lvl-warn td:first-child { box-shadow: inset 4px 0 0 var(--warn); }
 .m-head { position: relative; }
 .m-menu { position: absolute; top: 0; right: 0; background: none; border: 1.5px solid var(--line); border-radius: 14px; padding: 2px 9px; font-size: 0.75rem; font-weight: 800; color: var(--muted); }
 .m-menu:hover { border-color: var(--pink); color: var(--ink); }
+
+/* ---------------- Budget plan ---------------- */
+.card.budget { border-color: var(--olive); }
+.card.budget .kpis { margin: 6px 0; }
+.card.budget .delta { background: #fff7e0; }
+.bnotes { margin: 6px 0; padding-left: 0; list-style: none; font-size: 0.84rem; display: flex; flex-direction: column; gap: 4px; }
+.card.budget details summary { cursor: pointer; font-weight: 800; font-size: 0.85rem; color: var(--olive2); margin: 6px 0; }
+.list.fin tr.changed td { background: #fff7e0; }
+.list.fin small.good, .list.fin small.bad { font-weight: 800; }
+.patient { border: 1.5px solid var(--line); border-left-width: 5px; border-radius: 10px; padding: 8px 10px; margin: 6px 0; background: var(--paper); }
+.patient.sev2 { border-left-color: var(--warn); }
+.patient.sev3 { border-left-color: var(--bad); background: #fdf3f1; }
+.patient.sev1 { border-left-color: var(--good); }
+.pill.sev1 { background: #e6f3e2; color: var(--good); }
+.pill.sev2 { background: #fdf1d9; color: var(--warn); }
+.pill.sev3 { background: #fdecea; color: var(--bad); }
+.card.reqcard { border-color: var(--pink2); background: #fffafc; }
+.reqform { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+.reqform label { display: flex; flex-direction: column; font-size: 0.8rem; font-weight: 700; gap: 2px; }
+.reqform select { width: 100%; font-size: 0.82rem; padding: 4px 6px; }
+.reqs li { margin: 3px 0; font-size: 0.84rem; }

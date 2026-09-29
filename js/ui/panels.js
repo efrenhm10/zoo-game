@@ -125,11 +125,7 @@
   P.inspector = function (s, p) {
     if (!p) return '';
     const Z = ZG.zoo(s);
-    if (p.kind === 'vet') {
-      const q = s.animals.filter((a) => a.loc === 'quarantine');
-      return `<div class="card"><h3>🏥 Animal Hospital & Quarantine</h3><p>Condition: ${bar(s.infra.hospital.cond)}</p><p>Vet team staffing: ${ratioTxt(ZG.Staff.ratio(s, 'vets'))}</p>
-        <p><b>In quarantine:</b> ${q.length ? q.map((a) => `${spn(a.sp).emoji} ${esc(a.name)} (${a.qDays}d left → ${esc(habName(s, a.hab))})`).join('<br>') : 'none'}</p></div>`;
-    }
+    if (p.kind === 'vet') return P.hospital(s);
     if (p.kind === 'cafe') {
       const lm = s.ledger.months[s.ledger.months.length - 1];
       return `<div class="card"><h3>🍔 Food Court</h3><p>Food & retail revenue last month: <b>${lm ? $(lm.rev.concessions || 0) : '—'}</b></p><p>Guest services staffing: ${ratioTxt(ZG.Staff.ratio(s, 'guest'))} — more staff means shorter lines and higher spending per guest.</p></div>`;
@@ -142,7 +138,7 @@
     let html = `<div class="card"><h3>${esc(h.sponsor ? h.sponsor + ' ' + h.name : h.name)}</h3>
       <p class="sub">${ZG.BIOMES[h.biome].name} · ${U.num(h.area)} m² · ${ZG.Habitats.TIERS[h.tier].name}${h.climate !== 'none' ? ' · ' + (h.climate === 'chilled' ? '❄️ chilled building' : '🔥 heated building') : ''}</p>`;
     if (h.construction) {
-      html += `<p>🏗️ Under construction — ${Math.round((1 - h.construction.days / h.construction.total) * 100)}% complete, opens in ~${Math.ceil(h.construction.days / 30)} months.</p></div>`;
+      html += `<p>🏗️ Under construction — ${Math.round((1 - h.construction.days / h.construction.total) * 100)}% complete, opens in ~${Math.ceil(h.construction.days / 30)} months.</p><div class="actions">${btn('📨 Reserve animals for opening day', 'reqFor', { hab: h.id }, 'primary')}</div></div>`;
       return html;
     }
     html += P.diagnosis(s, h);
@@ -170,6 +166,7 @@
       ${h.renovation ? `<span>🛠️ Renovating (${Math.ceil(h.renovation.days / 30)} mo left)</span>` : btn(`Renovate (${$(ren)})`, 'renovate', { hab: h.id })}
       ${h.theming < 95 && !h.renovation ? btn(`Improve theming (${$(them)})`, 'theming', { hab: h.id }) : ''}
       ${h.climate === 'none' ? btn(`Add heated building (${$(1.2e6 * Z.costMult + h.area * 250)})`, 'climate', { hab: h.id, type: 'heated' }) + btn(`Add chilled building (${$(1.2e6 * Z.costMult + h.area * 250)})`, 'climate', { hab: h.id, type: 'chilled' }) : ''}
+      ${btn(animals.length ? '📨 Request more animals' : '📨 Request animals', 'reqFor', { hab: h.id })}
       ${!animals.length ? btn('Demolish', 'demolish', { hab: h.id }, 'danger') : ''}
     </div>
     <p class="sub">Capital work draws on the capital fund first, then operating cash.</p></div>`;
@@ -184,6 +181,45 @@
       .map((i) => `<div class="issue ${i.sev}"><div class="itext"><b>${i.icon} ${esc(i.short)}</b> ${esc(i.text)}</div>${i.fixes.length ? `<div class="actions">${i.fixes.map((f) => btn(f.label, f.act, f.data, 'sm ' + (i.sev === 'bad' ? 'primary' : ''))).join('')}</div>` : ''}</div>`)
       .join('');
     return `<div class="diag ${dg.level}"><b>${dg.level === 'bad' ? '⛔ Needs fixing' : dg.level === 'warn' ? '⚠️ Could be better' : 'ℹ️ Status'}</b>${rows}</div>`;
+  };
+
+  // Animal hospital: patient chart, quarantine, expecting mothers.
+  P.hospital = function (s) {
+    const vr = ZG.Staff.ratio(s, 'vets');
+    const sick = s.animals.filter((a) => a.sick).sort((a, b) => b.sick.sev - a.sick.sev || a.health - b.health);
+    const PLAN = { aggressive: '🩺 Specialist care', standard: '💊 Standard treatment', monitor: '👀 Monitoring only' };
+    const SEV = ['Mild', 'Moderate', 'Serious'];
+    const patients = sick
+      .map((a) => {
+        const sp = spn(a.sp);
+        const x = a.sick;
+        const plan = x.plan || (x.treated ? 'standard' : 'monitor');
+        const prog = x.total ? Math.round((1 - x.days / x.total) * 100) : null;
+        const cost = ZG.Animals.treatCost(s, a);
+        const outlook = a.health < 30 ? '<b class="bad">Critical</b>' : a.health < 55 ? '<b class="warn">Guarded</b>' : '<span class="good">Stable</span>';
+        const acts = [];
+        if (!x.treated) acts.push(btn(`Start treatment (${$(cost)})`, 'treat', { aid: a.id, lvl: 'standard' }, 'sm primary'));
+        if (plan !== 'aggressive' && x.sev >= 2) acts.push(btn(`Bring in specialists (${$(Math.round(cost * 2.4))})`, 'treat', { aid: a.id, lvl: 'aggressive' }, 'sm'));
+        return `<div class="patient sev${x.sev}"><div class="offer-top">${ZG.Portraits.img(a.sp, 'portrait sm')}<div><b>${esc(a.name)}</b> <small>${sp.name} · ${a.sex === 'M' ? '♂' : '♀'} · ${U.ageStr(a.age)}${a.star ? ' · ⭐' : ''}</small><br>
+          <b>${esc(x.name)}</b> <span class="pill sev${x.sev}">${SEV[x.sev - 1]}</span></div></div>
+          <div class="mini2"><span>Health</span>${bar(a.health)}${prog != null ? `<span>Recovery</span>${bar(prog)}` : ''}</div>
+          <small>${PLAN[plan]} · outlook ${outlook} · ~${x.days} days to go · ${a.loc === 'quarantine' ? 'in quarantine' : `treated in ${esc(habName(s, a.hab))}`}${x.since != null ? ` · since ${U.fmtDate(x.since)}` : ''}</small>
+          ${!x.treated && x.sev >= 3 ? '<p class="bad"><small>Untreated serious illness: high risk of death.</small></p>' : ''}
+          ${acts.length ? `<div class="actions">${acts.join('')}</div>` : ''}</div>`;
+      })
+      .join('');
+    const q = s.animals.filter((a) => a.loc === 'quarantine');
+    const preg = s.animals.filter((a) => a.preg);
+    const newborns = s.animals.filter((a) => a.age < 60);
+    const vetCost = s.ledger.months.slice(-3).reduce((t, m) => t + (m.exp.vetcare || 0), 0);
+    return `<div class="card"><h3>🏥 Animal Hospital & Quarantine</h3>
+      <div class="kpis"><div><small>Patients</small><b class="${sick.some((a) => a.sick.sev >= 3) ? 'bad' : ''}">${sick.length}</b></div><div><small>In quarantine</small><b>${q.length}</b></div><div><small>Vet staffing</small><b>${Math.round(vr * 100)}%</b></div><div><small>Vet bills (3 mo)</small><b>${$(vetCost)}</b></div></div>
+      <div class="grid2"><div>Building ${bar(s.infra.hospital.cond)}</div><div>Vet team ${bar(vr * 100)}</div></div>
+      ${vr < 0.9 ? `<p class="warn">The vet team is stretched thin: illnesses last longer and hit harder. ${btn('Hire a veterinarian', 'hire', { dept: 'vets', n: 1 }, 'sm')}</p>` : ''}
+      <h3>🩺 Patients</h3>${patients || '<p class="sub">No animals are sick right now. 🎉</p>'}
+      <h3>🧳 Quarantine</h3>${q.length ? `<ul class="plain">${q.map((a) => `<li>${ZG.Portraits.img(a.sp, 'portrait xs')} ${esc(a.name)} the ${spn(a.sp).name}: ${a.qDays} days left, then to ${esc(habName(s, a.hab))}</li>`).join('')}</ul>` : '<p class="sub">Nobody in quarantine.</p>'}
+      ${preg.length ? `<h3>🤰 Expecting</h3><ul class="plain">${preg.map((a) => `<li>${ZG.Portraits.img(a.sp, 'portrait xs')} ${esc(a.name)} the ${spn(a.sp).name}: due ${U.fmtDate(s.day + a.preg.days)}</li>`).join('')}</ul>` : ''}
+      ${newborns.length ? `<h3>🍼 Newborn checks</h3><ul class="plain">${newborns.map((a) => `<li>${ZG.Portraits.img(a.sp, 'portrait xs')} ${esc(a.name)} the ${spn(a.sp).name}, ${a.age} days old. Health ${Math.round(a.health)}</li>`).join('')}</ul>` : ''}</div>`;
   };
 
   P.buildForm = function (s, p) {
@@ -232,7 +268,7 @@
           ${moving ? `<select data-move="${a.id}"><option value="">Move to…</option>${habs.filter((h) => h.id !== a.hab).map((h) => `<option value="${h.id}">${esc(h.name)}</option>`).join('')}</select>` : btn('Move', 'moveOpen', { aid: a.id }, 'sm')}
           ${sp.program !== 'Loan' ? btn('Transfer', 'sendOut', { aid: a.id }, 'sm') : ''}</div></div></div>`;
     };
-    let html = `<h2>🦒 Collection (${s.animals.length} animals)</h2><p class="sub">Plus a supporting collection of birds, reptiles & invertebrates. 💊 = on contraception; 💞 = allowed to breed. Follow SSP recommendations to avoid unplanned births.</p>`;
+    let html = `<h2>🦒 Collection (${s.animals.length} animals)</h2><p class="sub">Plus a supporting collection of birds, reptiles & invertebrates. 💊 = on contraception; 💞 = allowed to breed. Follow SSP recommendations to avoid unplanned births.</p>${P.requestCard(s)}`;
     if (byHab.q) html += `<h3>🏥 Quarantine</h3><div class="agrid">${byHab.q.map(row).join('')}</div>`;
     for (const h of habs) {
       const list = byHab[h.id];
@@ -241,6 +277,50 @@
     }
     html += P.market(s);
     return html;
+  };
+
+  // Ask the AZA / SSP coordinators for specific animals.
+  P.requestCard = function (s) {
+    const RQ = ZG.Requests;
+    const habs = s.habitats.filter((h) => !h.renovation);
+    if (!habs.length) return '';
+    const st = (P.ui.req = P.ui.req || {});
+    if (!s.habitatsById[st.hab]) st.hab = habs[0].id;
+    const h = s.habitatsById[st.hab];
+    const here = [...new Set(s.animals.filter((a) => a.hab === h.id).map((a) => a.sp))];
+    const holds = new Set(s.ssp.recs.filter((r) => r.type === 'hold' && (r.status === 'open' || r.status === 'accepted')).map((r) => r.sp));
+    const held = new Set(s.animals.map((a) => a.sp));
+    const fits = Object.values(ZG.SPECIES)
+      .filter((sp) => sp.biomes.includes(h.biome) && sp.program !== 'Loan')
+      .sort((a, b) => (here.includes(b.id) - here.includes(a.id)) || (holds.has(b.id) - holds.has(a.id)) || a.name.localeCompare(b.name));
+    if (!fits.some((sp) => sp.id === st.sp)) st.sp = fits.length ? fits[0].id : null;
+    if (st.m == null) st.m = 0;
+    if (st.f == null) st.f = 1;
+    const opt = (v, label, cur) => `<option value="${v}" ${String(v) === String(cur) ? 'selected' : ''}>${label}</option>`;
+    const habSel = habs.map((x) => opt(x.id, `${x.construction ? '🏗️ ' : ''}${esc(x.name)} (${ZG.BIOMES[x.biome].name})`, st.hab)).join('');
+    const spSel = fits.map((sp) => opt(sp.id, `${sp.name}${here.includes(sp.id) ? ' · here now' : held.has(sp.id) ? ' · in collection' : ''}${holds.has(sp.id) ? ' · SSP wants space' : ''}${sp.program === 'SSP' ? ' · SSP' : ''}`, st.sp)).join('');
+    const num = (k) => `<select data-req="${k}">${[0, 1, 2, 3, 4, 5, 6, 8, 10].map((n) => opt(n, n, st[k])).join('')}</select>`;
+    let est = '';
+    if (st.sp) {
+      const e = RQ.estimate(s, st.sp, st.m, st.f, st.hab);
+      est = e.ok
+        ? `<p>Chance of approval: <b class="${e.odds >= 0.6 ? 'good' : e.odds >= 0.35 ? 'warn' : 'bad'}">${Math.round(e.odds * 100)}%</b> · answer in ${e.wait} · transport about <b>${$(e.cost)}</b> when they arrive (no purchase price: it's a breeding loan)</p>${e.notes.length ? `<ul class="bnotes">${e.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}<div class="actions">${btn('📨 Send request', 'reqSend', {}, 'primary')}</div>`
+        : `<p class="bad">⛔ ${esc(e.block)}</p>`;
+    }
+    const open = s.ssp.requests
+      .slice(0, 8)
+      .map((r) => {
+        const sp = spn(r.sp);
+        const label = { pending: `⏳ decision ~${U.fmtDate(r.decide)}`, waitlist: `🕒 waitlisted, ${U.fmtDate(r.decide)}`, approved: '✅ approved', partial: '🟡 partly approved', declined: '❌ declined', withdrawn: 'withdrawn' }[r.status];
+        return `<li>${ZG.Portraits.img(r.sp, 'portrait xs')} ${r.males}♂ ${r.females}♀ ${sp.name} → ${esc(habName(s, r.hab))}: <b>${label}</b>${r.note && r.status !== 'pending' ? ` <small class="sub">${esc(r.note)}</small>` : ''} ${r.status === 'pending' || r.status === 'waitlist' ? btn('Withdraw', 'reqCancel', { id: r.id }, 'sm') : ''}</li>`;
+      })
+      .join('');
+    return `<div class="card reqcard" id="req-card"><h3 style="margin-top:0">📨 Request animals from the AZA</h3>
+      <p class="sub">Ask the Species Survival Plan coordinators for animals for an existing habitat, or reserve them for one still under construction. They decide based on space, habitat standards, your AZA standing and whether animals are available.</p>
+      <div class="reqform"><label>For habitat <select data-req="hab">${habSel}</select></label>
+      <label>Species <select data-req="sp">${spSel || '<option>No species suit this habitat</option>'}</select></label>
+      <label>Males ${num('m')}</label><label>Females ${num('f')}</label></div>
+      ${est}${open ? `<h4>Your requests</h4><ul class="plain reqs">${open}</ul>` : ''}</div>`;
   };
 
   P.market = function (s) {
@@ -355,7 +435,9 @@
         ? `${P.slider(s, 'admission', 'Proposed admission (requires City Council ordinance)', 5, 80, 1)}${s.gov.feeProposal ? `<p class="warn">Ordinance for $${s.gov.feeProposal.price} pending — vote ${U.fmtDate(s.gov.feeProposal.day)}</p>` : ''}`
         : P.slider(s, 'admission', 'Adult admission', 5, Math.round(Z.refs.admission * 2), 1);
     return `<h2>💰 Budget & Finances</h2>
-      <div class="kpis"><div><small>Operating cash</small><b class="${s.cash < 0 ? 'bad' : ''}">${$(s.cash)}</b></div><div><small>Capital fund (restricted)</small><b>${$(s.capital)}</b></div><div><small>Credit line</small><b>${$(ZG.Econ.creditLimit(s))}</b></div><div><small>Annual op. budget</small><b>${$(ZG.Econ.annualBudget(s))}</b></div></div>
+      <div class="kpis"><div><small>Operating cash</small><b class="${s.cash < 0 ? 'bad' : ''}">${$(s.cash)}</b></div><div><small>Capital fund (restricted)</small><b>${$(s.capital)}</b></div><div><small>Credit line</small><b>${$(ZG.Econ.creditLimit(s))}</b></div></div>
+      <div id="budget-proj">${P.budgetProjection(s)}</div>
+      <p class="sub">Drag a slider to see the effect on next year's budget. Changes take effect when you let go.</p>
       <h3>Revenue policy</h3>${admission}
       ${P.slider(s, 'memberPrice', 'Family membership price', 30, Math.round(Z.refs.memberPrice * 2), 1)}
       <h3>Spending policy</h3>
@@ -371,6 +453,50 @@
   };
 
   // =====================================================================
+  // The 12-month budget plan. `over` holds slider values being dragged but not yet committed.
+  P.budgetProjection = function (s, over) {
+    const Z = ZG.zoo(s);
+    const base = ZG.Econ.project(s);
+    const pr = over ? ZG.Econ.project(s, over) : base;
+    const p = Object.assign({}, s.policy, over || {});
+    const d = pr.net - base.net;
+    const lines = (obj, bobj, names) =>
+      Object.entries(obj)
+        .filter(([, v]) => Math.abs(v) >= 500)
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, v]) => {
+          const ch = v - (bobj[k] || 0);
+          return `<tr class="${Math.abs(ch) >= 1000 ? 'changed' : ''}"><td>${names[k] || k}</td><td>${$(v)}${Math.abs(ch) >= 1000 ? ` <small class="${(names === ZG.Econ.EXP ? -ch : ch) > 0 ? 'good' : 'bad'}">${ch > 0 ? '+' : '−'}${$(Math.abs(ch))}</small>` : ''}</td></tr>`;
+        })
+        .join('');
+    // Plain-language consequences of the settings, relative to what this zoo needs.
+    const notes = [];
+    const ref = Z.refs;
+    const rel = (k) => p[k] / Math.max(1, ref[k]);
+    const gd = pr.guests - base.guests;
+    if (Math.abs(gd) >= 500) notes.push(`${gd > 0 ? '📈' : '📉'} About <b>${U.num(Math.abs(Math.round(gd)))} ${gd > 0 ? 'more' : 'fewer'} visitors</b> a year.`);
+    if (rel('marketing') < 0.7) notes.push('📣 Marketing is well below normal. Fewer people will hear about the zoo, and new members will slow.');
+    if (rel('maintenance') < 0.8) {
+      const eff = ZG.Infra.maintEffect(Object.assign({}, s, { policy: p }));
+      notes.push(`🔧 Maintenance is underfunded (upkeep effectiveness ${Math.round(eff * 100)}%). Pipes, fences and habitats will wear out faster, and breakdowns cost far more than upkeep.`);
+    }
+    if (rel('enrichment') < 0.8) notes.push('🧩 Enrichment is below what the collection needs. Keeper care and animal welfare will slip.');
+    if (rel('conservation') < 0.6) notes.push('🌍 Field conservation is low. AZA standing, reputation and conservation-minded donors will notice.');
+    if (rel('maintenance') > 1.3) notes.push('🔧 Generous maintenance slows decay and the deferred backlog.');
+    if (rel('marketing') > 1.5) notes.push('📣 Heavy marketing has diminishing returns. Each extra dollar brings fewer visitors.');
+    if (Z.priceNeedsVote && p.admission !== s.policy.admission) notes.push('🏛️ Admission changes need a City Council vote before they take effect.');
+    const lm = s.ledger.months.slice(-12);
+    const actual = lm.length ? lm.reduce((a, m) => a + m.net, 0) * (12 / lm.length) : null;
+    return `<div class="card budget"><h3 style="margin-top:0">📊 Budget plan: next 12 months</h3>
+      <div class="kpis"><div><small>Projected revenue</small><b>${$(pr.revTotal)}</b></div><div><small>Projected spending</small><b>${$(pr.expTotal)}</b></div>
+      <div><small>Projected ${pr.net >= 0 ? 'surplus' : 'deficit'}</small><b class="${pr.net >= 0 ? 'good' : 'bad'}">${$(pr.net)}</b></div>
+      ${over && Math.abs(d) >= 1000 ? `<div class="delta"><small>This change</small><b class="${d >= 0 ? 'good' : 'bad'}">${d >= 0 ? '+' : '−'}${$(Math.abs(d))}/yr</b></div>` : ''}</div>
+      ${notes.length ? `<ul class="bnotes">${notes.map((n) => `<li>${n}</li>`).join('')}</ul>` : ''}
+      <details ${over ? 'open' : ''}><summary>Line by line</summary><div class="grid2"><table class="list fin"><tr><th>Revenue</th><th></th></tr>${lines(pr.rev, base.rev, ZG.Econ.REV)}</table>
+      <table class="list fin"><tr><th>Spending</th><th></th></tr>${lines(pr.exp, base.exp, ZG.Econ.EXP)}</table></div></details>
+      ${actual != null ? `<p class="sub">For comparison, the last ${lm.length} month${lm.length > 1 ? 's' : ''} actually ran at ${$(actual)}/yr. Weather, events and emergencies move the real number around.</p>` : ''}</div>`;
+  };
+
   P.tab_staff = function (s) {
     const Z = ZG.zoo(s);
     const rows = ZG.Staff.DEPTS.map((d) => {

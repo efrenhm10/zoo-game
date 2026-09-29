@@ -338,6 +338,20 @@
   A.merchCollab = (s, d) => ZG.Merch.collab(s, d.name);
   A.merchDrop = (s, d) => ZG.Merch.launchDrop(s, +d.aid);
 
+  A.reqFor = (s, d) => {
+    const h = s.habitatsById[+d.hab];
+    P.ui.req = { hab: +d.hab, sp: h ? (s.animals.find((a) => a.hab === h.id) || {}).sp : null, m: 0, f: 1 };
+    P.ui.tab = 'animals';
+    P.ui.scrollTo = 'req-card';
+    return null;
+  };
+  A.reqSend = (s) => {
+    const r = P.ui.req || {};
+    return ZG.Requests.submit(s, r.sp, r.m, r.f, r.hab);
+  };
+  A.reqCancel = (s, d) => ZG.Requests.cancel(s, +d.id);
+  A.treat = (s, d) => ZG.Animals.treat(s, +d.aid, d.lvl);
+
   // Habitat fixes
   A.bumpPolicy = (s, d) => {
     const cur = s.policy[d.key];

@@ -126,7 +126,7 @@
   // =====================================================================
   def('zoo_event_result', {
     cat: 'guest',
-    make: (s, c) => ({ icon: c.icon, title: c.title, text: c.html, choices: [{ label: 'Nice', apply: () => '' }] }),
+    make: (s, c) => ({ icon: c.icon, title: c.title, text: c.html, choices: [{ label: 'OK', apply: () => '' }] }),
   });
 
   def('intro', {
@@ -162,6 +162,7 @@
         { label: 'Aggressive treatment', detail: 'Specialists, advanced diagnostics, 24/7 monitoring', cost: c.cost * 2.4, costCat: 'vetcare',
           apply: (s) => {
             a.sick.treated = true;
+            a.sick.plan = 'aggressive';
             a.sick.sev = Math.max(1, a.sick.sev - 1);
             a.sick.days = Math.ceil(a.sick.days * 0.6);
             morale(s, 2);
@@ -170,6 +171,7 @@
         { label: 'Standard treatment', detail: 'Your vet team manages it in-house', cost: c.cost, costCat: 'vetcare',
           apply: (s) => {
             a.sick.treated = true;
+            a.sick.plan = 'standard';
             return `${a.name} is being treated. Recovery will take time.`;
           } },
         { label: 'Monitor and wait', detail: 'Save money, accept the risk',
