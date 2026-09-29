@@ -353,6 +353,24 @@
   A.acquireInto = (s, d) => ZG.AZA.acquire(s, +d.oid, +d.hab);
   A.expand = (s, d) => ZG.Habitats.expand(s, +d.hab);
   A.reqCancel = (s, d) => ZG.Requests.cancel(s, +d.id);
+  A.renameStart = (s, d) => {
+    P.ui.renaming = +d.hab;
+    setTimeout(() => {
+      const i = document.getElementById('rename-input');
+      if (i) (i.focus(), i.select());
+    }, 30);
+    return null;
+  };
+  A.renameCancel = () => {
+    P.ui.renaming = null;
+    return null;
+  };
+  A.renameSave = (s, d) => {
+    const i = document.getElementById('rename-input');
+    const r = ZG.Habitats.rename(s, +d.hab, i ? i.value : '');
+    if (r.ok) P.ui.renaming = null;
+    return r;
+  };
   A.treat = (s, d) => ZG.Animals.treat(s, +d.aid, d.lvl);
 
   // Habitat fixes

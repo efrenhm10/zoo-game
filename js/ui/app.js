@@ -482,6 +482,12 @@
     window.addEventListener('keydown', (e) => {
       if (!s) return;
       const tag = (document.activeElement && document.activeElement.tagName) || '';
+      if (document.activeElement && document.activeElement.id === 'rename-input' && (e.key === 'Enter' || e.key === 'Escape')) {
+        e.preventDefault();
+        const bt = el.panel.querySelector(e.key === 'Enter' ? '[data-act="renameSave"]' : '[data-act="renameCancel"]');
+        if (bt) bt.click();
+        return;
+      }
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
       if (modalOpen) {
         if (e.key === 'Escape' || e.key === 'e' || e.key === 'E') {

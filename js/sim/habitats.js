@@ -136,6 +136,26 @@
     return { ok: true, msg: `Expansion started. ${h.name} gets 30% more space in about ${Math.round(days / 30)} months.` };
   };
 
+  // Rename a habitat, unless a sponsor or donor holds its naming rights.
+  H.renameLock = function (s, h) {
+    if (h.sponsor) return `${h.sponsor} holds the naming rights under its sponsorship.`;
+    if (h.donorName) return `It is named in honor of ${h.donorName}, who paid for the naming rights.`;
+    return null;
+  };
+  H.rename = function (s, hid, name) {
+    const h = s.habitatsById[hid];
+    if (!h) return { ok: false, msg: 'Not found.' };
+    const lock = H.renameLock(s, h);
+    if (lock) return { ok: false, msg: `You can't rename this habitat: ${lock}` };
+    name = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+    if (name.length < 2) return { ok: false, msg: 'Type a name (at least 2 characters).' };
+    if (name === h.name) return { ok: true, msg: 'Name unchanged.' };
+    const old = h.name;
+    h.name = name;
+    ZG.Sim.news(s, `🪧 “${old}” has been renamed “${name}.” New signs are going up.`, 'info');
+    return { ok: true, msg: `Renamed to “${name}.”` };
+  };
+
   // Re-landscape a habitat for a different biome (a bigger renovation).
   H.relandscapeCost = function (s, h) {
     return Math.round(H.replaceCost(s, h) * 0.45 + 80000);

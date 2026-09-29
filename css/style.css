@@ -400,3 +400,7 @@ tr.lvl-warn td:first-child { box-shadow: inset 4px 0 0 var(--warn); }
 .ainfo > .sex.f, .acard .sex.f, .offer-top .sex.f { background: #fbe9f1; }
 .sexcount { font-size: 0.8rem; margin: 0 2px; }
 .groupmix { margin: -4px 0 6px; }
+.htitle { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.htitle h3 { margin: 0.2em 0; }
+.rename { display: flex; gap: 6px; align-items: center; margin: 4px 0 6px; }
+.rename input { flex: 1; min-width: 0; font-weight: 800; }

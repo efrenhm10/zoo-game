@@ -135,7 +135,11 @@
     const f = s._hf && s._hf[h.id];
     const animals = s.animals.filter((a) => a.hab === h.id);
     const spList = [...new Set(animals.map((a) => a.sp))];
-    let html = `<div class="card"><h3>${esc(h.sponsor ? h.sponsor + ' ' + h.name : h.name)}</h3>
+    const lock = ZG.Habitats.renameLock(s, h);
+    const title = P.ui.renaming === h.id && !lock
+      ? `<div class="rename"><input id="rename-input" data-rename="${h.id}" value="${esc(h.name)}" maxlength="40" aria-label="New habitat name">${btn('Save', 'renameSave', { hab: h.id }, 'sm primary')}${btn('Cancel', 'renameCancel', {}, 'sm')}</div>`
+      : `<div class="htitle"><h3>${esc(h.sponsor ? h.sponsor + ' ' + h.name : h.name)}</h3>${lock ? `<span class="sub" title="${esc(lock)}">🔒 Sponsor-named</span>` : btn('✏️ Rename', 'renameStart', { hab: h.id }, 'sm')}</div>`;
+    let html = `<div class="card">${title}${h.donorName ? `<p class="sub">Named in honor of ${esc(h.donorName)}</p>` : ''}
       <p class="sub">${ZG.BIOMES[h.biome].name} · ${U.num(h.area)} m² · ${ZG.Habitats.TIERS[h.tier].name}${h.climate !== 'none' ? ' · ' + (h.climate === 'chilled' ? '❄️ chilled building' : '🔥 heated building') : ''}</p>`;
     if (h.construction) {
       html += `<p>🏗️ Under construction — ${Math.round((1 - h.construction.days / h.construction.total) * 100)}% complete, opens in ~${Math.ceil(h.construction.days / 30)} months.</p><div class="actions">${btn('📨 Reserve animals for opening day', 'reqFor', { hab: h.id }, 'primary')}</div></div>`;
