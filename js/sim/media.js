@@ -26,6 +26,7 @@
 
   MD.topics = function (s) {
     const out = [];
+    if (s.plan && s.plan.status === 'review') out.push({ id: 'plan', name: 'Pitch your strategic master plan', why: 'Builds public support before the vote.' });
     if (s.dev.campaign) out.push({ id: 'campaign', name: `Pitch the “${s.dev.campaign.label}” campaign`, why: 'Boosts campaign momentum and brings in pledges.' });
     const g = s.gov;
     if (g.request || g.feeProposal || (g.stateReq && !g.stateReq.passed)) out.push({ id: 'budget', name: 'Make the case for public funding', why: 'Public pressure on the politicians deciding your budget.' });
@@ -64,6 +65,12 @@
     }
     if (!gaffe) {
       switch (topicId) {
+        case 'plan': {
+          const g = Math.round(6 * k * (O.politics ? 1.2 : 1));
+          s.plan.support = U.clamp(s.plan.support + g, 0, 100);
+          lines.push(`Public support for the master plan +${g}.`);
+          break;
+        }
         case 'campaign': {
           const c = s.dev.campaign;
           c.momentum = Math.min(1.5, (c.momentum || 0) + 0.25 * k);

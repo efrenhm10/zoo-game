@@ -71,6 +71,12 @@ Each concept shows its cost, build time, guest appeal, welfare boost, upkeep, ca
 - **The state.** The state capitol can fund capital projects in Hawaiʻi, California, Texas (which meets only in odd years) and Colorado. File a request while the session is open, line up key legislators, then hope the Governor signs it rather than vetoing or line-item vetoing it. D.C. has no state, so the National Zoo works Congress's appropriations subcommittees instead.
 - **Your board / Smithsonian leadership.** Trustees and executives you can meet one-on-one to shore up confidence in you.
 
+## 🗺️ Growing the zoo
+
+- **Strategic master plan.** Hire planners and choose three priorities: grow the footprint, open a second site, fix what we have, conservation leadership, guest experience, community and education, or financial sustainability. The draft goes out for public comment (hold community meetings, pitch it on air, ask decision-makers for their votes), then the City Council, board or Smithsonian leadership votes. An adopted plan runs for ten years, has goals you can hit for extra confidence, and helps campaigns, grants, state requests and budget asks. Plans can be voted down and revised.
+- **Buy land.** Each zoo has a realistic parcel: Honolulu's Kapahulu service yard and old parking lot, San Diego's Park Boulevard canyon, a Rock Creek hillside for the National Zoo, Hermann Park acreage in Houston, or mountainside acreage at Cheyenne Mountain. Buying it adds three large habitat lots that appear at the back of the zoo on the 3D map.
+- **Open a second site** (Honolulu, Houston, National Zoo): either a public wildlife park with its own visitors, admissions and running costs, or an off-exhibit conservation and breeding center that raises your AZA standing every month.
+
 ## 📺 Media, events and the gift shop
 
 - **Media.** Pick a message (your campaign, the budget fight, an upcoming event, a new baby, damage control after bad news, memberships, a conservation story) and an outlet: morning TV, public radio, talk radio, an op-ed, a livestream or a podcast. Good appearances add campaign momentum and pledges, political pressure, ticket sales or members. Live shows can go badly.
@@ -120,6 +126,7 @@ js/sim/zooevents.js   adult nights, concerts, lights, fun runs, free days
 js/sim/merch.js       gift shop pricing, product lines, brand collaborations
 js/sim/diagnose.js    why a habitat is struggling and how to fix it
 js/sim/requests.js    requesting animals from AZA / SSP coordinators
+js/sim/growth.js      strategic master plan, land purchases, second sites
 js/ui/portraits.js    roundel portraits rendered from the 3D models
 js/ui/                panels, creator, app (UI shell)
 js/vendor/            three.min.js (r149, MIT)

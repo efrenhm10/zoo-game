@@ -85,7 +85,7 @@
     if (g.needs === 'education') odds *= U.clamp(ZG.Staff.ratio(s, 'education'), 0.4, 1.3) * (s.flags.eduBoost > s.day ? 1.25 : 1);
     if (g.needs === 'conservation') odds *= U.clamp(s.aza / 70, 0.4, 1.3);
     if (g.needs === 'infrastructure') odds *= ZG.Infra.avgCond(s) < 50 ? 1.3 : 0.7;
-    odds *= ZG.mod(s, 'fundraising');
+    odds *= ZG.mod(s, 'fundraising') * (ZG.Growth.adopted(s) ? 1.1 : 1);
     s.dev.grants.push({ name: g.name, amt: U.ri(s, g.amt[0], g.amt[1]), odds: U.clamp(odds, 0.03, 0.9), day: s.day + U.ri(s, 75, 150), infra: g.needs === 'infrastructure' });
     return { ok: true, msg: `Application submitted. Decision in ~3–5 months.` };
   };
@@ -161,7 +161,7 @@
     // Campaign progress: ambient campaign giving
     const c = s.dev.campaign;
     if (c) {
-      const trickle = c.goal * 0.012 * (1 + (c.momentum || 0)) * devR * U.clamp(s.rep / 70, 0.5, 1.3) * s.economy * ZG.mod(s, 'fundraising');
+      const trickle = c.goal * 0.012 * (1 + (c.momentum || 0)) * ZG.Growth.fundBoost(s) * devR * U.clamp(s.rep / 70, 0.5, 1.3) * s.economy * ZG.mod(s, 'fundraising');
       ZG.Econ.earn(s, 'donations', trickle, true);
       c.raised += trickle;
       c.momentum = Math.max(0, (c.momentum || 0) * 0.85);

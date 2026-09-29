@@ -108,17 +108,19 @@
     let top = '';
     if (R.selected != null) top = P.inspector(s, s.plots[R.selected]);
     else top = '<p class="tip">Click a habitat or an <b>Available lot</b> on the map to inspect or build.</p>';
-    const rows = s.plots
-      .filter((p) => p.kind === 'habitat')
-      .map((p) => {
+    const rowOf = (p) => {
         const h = p.hab ? s.habitatsById[p.hab] : null;
         if (!h) return `<tr data-act="select" data-plot="${p.id}" class="click"><td>🪧 <i>Available lot</i></td><td>${U.num(p.area)} m²</td><td colspan="2">${btn('Plan a habitat', 'select', { plot: p.id }, 'sm')}</td></tr>`;
         const n = s.animals.filter((a) => a.hab === h.id).length;
         const dg = h.construction ? null : ZG.Diagnose.habitat(s, h);
         const chip = dg && dg.summary ? `<br><span class="dchip ${dg.level}">${dg.level === 'bad' ? '⛔' : '⚠️'} ${esc(dg.summary)}</span>` : '';
         return `<tr data-act="select" data-plot="${p.id}" class="click ${dg ? 'lvl-' + dg.level : ''}"><td>${esc(h.name)}${h.construction ? ' 🏗️' : h.renovation ? ' 🛠️' : ''}${chip}</td><td>${n} animals</td><td style="width:90px">${h.construction ? `${Math.round((1 - h.construction.days / h.construction.total) * 100)}% built` : bar(h.condition)}</td><td>${Math.round(ZG.Habitats.appeal(s, h))}★</td></tr>`;
-      })
-      .join('');
+    };
+    let rows = s.plots.filter((p) => p.kind === 'habitat' && !p.site).map(rowOf).join('');
+    for (const site of s.sites || []) {
+      rows += `<tr><th colspan="4" class="sitehead">🏞️ ${esc(site.name)} <small>${site.kind === 'public' ? `second site · ${U.num(site.ytd || 0)} visitors this year` : 'conservation & breeding center (off-exhibit)'}</small></th></tr>`;
+      rows += s.plots.filter((p) => p.site === site.id).map(rowOf).join('');
+    }
     return `<h2>🏞️ Habitats & Construction</h2>${top}<h3>All plots</h3><table class="list">${rows}</table>`;
   };
 
@@ -685,6 +687,7 @@
   A.select = (s, d) => {
     ZG.Render.state.selected = +d.plot;
     P.ui.tab = 'habitats';
+    if (P.ui.sub) P.ui.sub.habitats = 'list';
     return null;
   };
   A.build = (s, d) => {

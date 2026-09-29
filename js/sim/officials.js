@@ -200,6 +200,7 @@
       if (g.feeProposal) return { key: 'fee', text: `the $${g.feeProposal.price} admission ordinance` };
       if (g.type === 'contract' && U.dateOf(s.day).y >= g.contractYear - 1) return { key: 'contract', text: 'renewing the management agreement' };
     }
+    if (s.plan && s.plan.status === 'review' && ZG.Growth.voteGroup(s) === group) return { key: 'plan', text: 'adopting your strategic master plan' };
     if (group === 'board' && s.dev.campaign) return { key: 'campaign', text: `the “${s.dev.campaign.label}” campaign` };
     return null;
   };
@@ -309,7 +310,7 @@
     const r = s.gov.stateReq;
     if (!st || !r) return;
     if (!r.passed && t.m === st.decide) {
-      const lean = r.bump + O.support(s, 'state', 'state') * 0.25 + (s.economy - 1) * 0.8 - 0.05;
+      const lean = r.bump + O.support(s, 'state', 'state') * 0.25 + (s.economy - 1) * 0.8 - 0.05 + (ZG.Growth.adopted(s) ? 0.08 : 0);
       const v = O.vote(s, 'state', 'state', lean);
       if (v.passed) {
         r.passed = true;

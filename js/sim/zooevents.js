@@ -160,6 +160,7 @@
   ZE.finish = function (s, e, lines, net, people) {
     const T = ZE.TYPES[e.type];
     s.zooEvents.history.unshift({ type: e.type, day: s.day, net, people });
+    if (['science', 'free', 'boo', 'run'].includes(e.type)) s.stats.communityEvents = (s.stats.communityEvents || 0) + 1;
     if (s.zooEvents.history.length > 30) s.zooEvents.history.pop();
     const html = `<p>${lines.join('</p><p>')}</p>${net != null ? `<p><b>Net result: <span class="${net >= 0 ? 'good' : 'bad'}">${$(net)}</span></b></p>` : ''}`;
     ZG.Events.queue(s, 'zoo_event_result', { icon: T.icon, title: T.name, html });

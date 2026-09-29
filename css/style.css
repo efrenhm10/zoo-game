@@ -404,3 +404,8 @@ tr.lvl-warn td:first-child { box-shadow: inset 4px 0 0 var(--warn); }
 .htitle h3 { margin: 0.2em 0; }
 .rename { display: flex; gap: 6px; align-items: center; margin: 4px 0 6px; }
 .rename input { flex: 1; min-width: 0; font-weight: 800; }
+.card.plan { border-color: var(--pink2); }
+.card.adopted { border-color: var(--good); background: #f4faef; }
+.chips { gap: 6px; }
+th.sitehead { text-align: left; padding-top: 12px; color: var(--olive2); font-size: 0.85rem; }
+th.sitehead small { color: var(--muted); font-weight: 600; }

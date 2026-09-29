@@ -109,6 +109,7 @@
     if (!s.zooEvents) ZG.ZooEvents.init(s);
     if (!s.merch) ZG.Merch.init(s);
     ZG.Requests.init(s);
+    ZG.Growth.init(s);
   };
 
   Sim.reindex = function (s) {
@@ -123,6 +124,7 @@
     ZG.Econ.weather(s, t);
     ZG.ZooEvents.daily(s);
     ZG.Requests.daily(s);
+    ZG.Growth.daily(s);
     if (s.closure) {
       s.closure.days--;
       if (s.closure.days <= 0) {
@@ -137,6 +139,7 @@
 
     ZG.Staff.daily(s);
     ZG.Econ.daily(s, t);
+    ZG.Growth.siteDaily(s, t);
     ZG.Animals.daily(s, t);
     ZG.Habitats.daily(s);
     ZG.Infra.daily(s, t);
@@ -176,6 +179,7 @@
     ZG.Officials.monthly(s, t);
     ZG.Partner.monthly(s, t);
     ZG.Merch.monthly(s, t);
+    ZG.Growth.monthly(s, t);
     ZG.AZA.monthly(s, t);
     ZG.AZA.refreshMarket(s);
     if (t.m === 1 && s.day > 60) ZG.AZA.generatePlan(s);

@@ -54,6 +54,7 @@
       name: o.name,
       biome: o.biome,
       area: plot.area,
+      site: plot.site || null,
       condition: o.condition != null ? o.condition : 95,
       theming: o.theming != null ? o.theming : 60,
       tier: o.tier || 'standard',
@@ -213,7 +214,7 @@
   };
   H.totalAppeal = function (s) {
     let a = ZG.zoo(s).supporting.appeal;
-    for (const h of s.habitats) a += H.appeal(s, h);
+    for (const h of s.habitats) if (!h.site) a += H.appeal(s, h); // a second site draws its own guests
     return a;
   };
 

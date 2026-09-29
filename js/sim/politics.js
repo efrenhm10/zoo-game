@@ -24,6 +24,7 @@
   P.odds = function (s, bump, key) {
     const g = s.gov;
     if (key && s.officials) bump += ZG.Officials.support(s, g.type === 'federal' ? 'federal' : 'local', key) * 0.3;
+    if (ZG.Growth && ZG.Growth.adopted(s)) bump += 0.04; // a credible plan helps budget asks
     return U.clamp(0.35 + (g.relationship - 50) / 110 + (s.rep - 60) / 220 + (s.economy - 1) * 1.6 + ZG.mod(s, 'politics') / 100 + (g.mayor === 'supportive' ? 0.08 : g.mayor === 'austerity' ? -0.1 : 0) + bump, 0.04, 0.95);
   };
 

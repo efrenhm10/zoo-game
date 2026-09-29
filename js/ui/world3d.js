@@ -126,6 +126,13 @@
     st.boatSets = [];
     st.trains = [];
     st.lifts = [];
+    st.northZ = s.layout.ext ? toW(0, s.layout.ext.y0)[1] - 35 : -135;
+    if (s.layout.ext) {
+      const sc2 = st.sun.shadow.camera;
+      sc2.top *= 1.25;
+      sc2.bottom *= 1.25;
+      sc2.updateProjectionMatrix();
+    }
     buildTerrain(s, scene, Z);
     buildMovers(scene);
     buildPaths(s, scene, Z);
@@ -157,7 +164,7 @@
 
   // Flat zoo grounds blended into the real-world setting around them.
   function zooBlend(X, Z) {
-    const dx = Math.max(-215 - X, 0, X - 215), dz = Math.max(-135 - Z, 0, Z - 175);
+    const dx = Math.max(-215 - X, 0, X - 215), dz = Math.max((st.northZ || -135) - Z, 0, Z - 175);
     const d = Math.hypot(dx, dz);
     const t = Math.min(1, d / 70);
     return t * t * (3 - 2 * t);
@@ -243,9 +250,11 @@
     }
     // Trees between plots inside the zoo
     for (let i = 0; i < 700; i++) {
-      const sx = L.xs[0] - 45 + r0() * (L.xs[L.cols] - L.xs[0] + 90), sy = L.ys[0] - 50 + r0() * (SH - L.ys[0]);
+      const top = L.ext ? L.ext.y0 : L.ys[0];
+      const sx = L.xs[0] - 45 + r0() * (L.xs[L.cols] - L.xs[0] + 90), sy = top - 50 + r0() * (SH - top + 50);
       if (s.plots.some((p) => sx > p.x - 6 && sx < p.x + p.w + 6 && sy > p.y - 6 && sy < p.y + p.h + 6)) continue;
       if (L.xs.some((px) => Math.abs(px - sx) < L.P / 2 + 8) || L.ys.some((py) => Math.abs(py - sy) < L.P / 2 + 8)) continue;
+      if (L.ext && sy < L.ys[0] && (L.ext.xs.some((px) => Math.abs(px - sx) < L.P / 2 + 8) || Math.abs(L.ext.y0 - sy) < L.P / 2 + 8)) continue;
       if (sy > L.ys[L.rows] && Math.abs(sx - L.entrance.x) < 170) continue;
       const [X, Zc] = toW(sx, sy);
       put(kinds[Math.floor(r0() * kinds.length)], [X, 0, Zc, 0.6 + r0() * 0.5]);
@@ -257,7 +266,7 @@
       if (im && far) im.castShadow = false;
     }
     // Perimeter fence
-    const [fx0, fz0] = toW(L.xs[0] - 50, L.ys[0] - 55);
+    const [fx0, fz0] = toW(L.xs[0] - 50, (L.ext ? L.ext.y0 : L.ys[0]) - 55);
     const [fx1, fz1] = toW(L.xs[L.cols] + 50, SH);
     const posts = [];
     const add = (a, b) => {
@@ -554,6 +563,10 @@
     for (const x of L.xs) add(x, L.ys[0], x, L.ys[L.rows], L.P - 6);
     for (const y of L.ys) add(L.xs[0], y, L.xs[L.cols], y, L.P - 6);
     add(L.xs[3], L.ys[L.rows], L.entrance.x, SH, L.P - 6);
+    if (L.ext) {
+      add(L.xs[0], L.ext.y0, L.xs[L.cols], L.ext.y0, L.P - 6);
+      for (const x of L.ext.xs) add(x, L.ext.y0, x, L.ys[0], L.P - 6);
+    }
     // plaza
     const [px, pz] = toW(L.entrance.x, (L.ys[L.rows] + SH) / 2 + 8);
     const t = tex.clone();
@@ -1199,6 +1212,7 @@
 
   function syncPlots(s) {
     for (const p of s.plots) {
+      if (p.site) continue; // second-site habitats aren't on this map
       const h = p.hab ? s.habitatsById[p.hab] : null;
       const key = p.kind === 'habitat' ? (h ? h.id + '|' + habitatKey(h) + '|' + (s.animals.some((a) => a.hab === h.id && a.sp === 'california_condor') ? 'n' : '') : 'lot') : p.kind;
       if (st.plotGroups.get(p.id) && st.plotGroups.get(p.id).key === key) continue;
@@ -1231,6 +1245,7 @@
     const h = s.habitatsById[a.hab];
     if (!h) return null;
     const p = s.plots[h.plot];
+    if (!p || p.site) return null;
     return { x: p.x + 12, y: p.y + 12, w: p.w - 24, h: p.h - 24, plot: p, hab: h };
   }
 
@@ -1351,7 +1366,7 @@
     return pts;
   }
   function planGuest(s, g) {
-    const habPlots = s.plots.filter((p) => p.kind === 'habitat' && p.hab);
+    const habPlots = s.plots.filter((p) => p.kind === 'habitat' && p.hab && !p.site);
     let target = null;
     if (habPlots.length) {
       const ws = habPlots.map((p) => 1 + ZG.Habitats.appeal(s, s.habitatsById[p.hab]));
@@ -1493,8 +1508,8 @@
   // ---------------------------------------------------------------------
   function blocked(s, x, y) {
     const L = s.layout;
-    if (x < L.xs[0] - 45 || x > L.xs[L.cols] + 45 || y < L.ys[0] - 50 || y > SH + 60) return true;
-    for (const p of s.plots) if (x > p.x + 3 && x < p.x + p.w - 3 && y > p.y + 3 && y < p.y + p.h - 3) return true;
+    if (x < L.xs[0] - 45 || x > L.xs[L.cols] + 45 || y < (L.ext ? L.ext.y0 : L.ys[0]) - 50 || y > SH + 60) return true;
+    for (const p of s.plots) if (!p.site &&x > p.x + 3 && x < p.x + p.w - 3 && y > p.y + 3 && y < p.y + p.h - 3) return true;
     return false;
   }
   R.setWalk = function (s, on) {
@@ -1520,6 +1535,7 @@
     const a = st.avatar;
     let best = null, bd = 50;
     for (const p of s.plots) {
+      if (p.site) continue;
       const dx = Math.max(p.x - a.x, 0, a.x - (p.x + p.w));
       const dy = Math.max(p.y - a.y, 0, a.y - (p.y + p.h));
       const d = Math.hypot(dx, dy);
@@ -1610,7 +1626,7 @@
   };
   R.focusPlot = function (s, pid) {
     const p = s.plots[pid];
-    if (!p) return;
+    if (!p || p.site) return;
     const [X, Zc] = toW(p.x + p.w / 2, p.y + p.h / 2);
     Object.assign(st.cam, { tx: X, tz: Zc, dist: Math.min(st.cam.dist, 110) });
   };
@@ -1666,6 +1682,7 @@
     const camPos = st.camera.position;
     // habitat signs
     for (const p of s.plots) {
+      if (p.site) continue;
       const h = p.hab ? s.habitatsById[p.hab] : null;
       let text = null;
       if (p.kind === 'vet') text = '🏥 Animal Hospital';
@@ -1854,13 +1871,16 @@
   // ---------------------------------------------------------------------
   R.frame = function (s, dt) {
     if (!st.renderer || !s) return;
-    const key = s.zooId + s.seed;
+    const key = s.zooId + s.seed + ':' + (s.layoutV || 0);
     if (key !== st.zooKey) {
+      const sameZoo = st.zooKey && st.zooKey.split(':')[0] === s.zooId + s.seed;
+      const cam = sameZoo ? Object.assign({}, st.cam) : null;
       R.reset();
       buildScene(s);
       st.zooKey = key;
       R.fitCamera();
-      st.camera.position.set(0, 400, 300);
+      if (cam) Object.assign(st.cam, cam);
+      else st.camera.position.set(0, 400, 300);
     }
     st.time += dt;
     syncPlots(s);
@@ -1876,7 +1896,7 @@
       for (const f of s._fx) {
         const h = s.habitatsById[f.hab];
         const p = h ? s.plots[h.plot] : null;
-        if (p) {
+        if (p && !p.site) {
           const [X, Zc] = toW(p.x + p.w / 2, p.y + p.h / 2);
           st.fx.push({ x: X, z: Zc, t: 0, icon: { birth: '🍼', death: '🕊️', open: '🎉' }[f.type] || '✨' });
         }
@@ -1912,7 +1932,7 @@
         continue;
       }
       const p = s.plots[pid];
-      if (!p) continue;
+      if (!p || p.site) continue;
       if (!st[holder]) {
         st[holder] = new T.Mesh(new T.RingGeometry(0.985, 1, 4, 1), mat);
         st[holder].rotation.x = -Math.PI / 2;
@@ -2068,7 +2088,7 @@
     const [x, y] = toS(hit.x, hit.z);
     return { x, y };
   };
-  R.plotAt = (s, x, y) => s.plots.find((p) => x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h) || null;
+  R.plotAt = (s, x, y) => s.plots.find((p) => !p.site && x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h) || null;
 
   R.bindInput = function (getState, cb) {
     const cv = st.canvas;

@@ -36,6 +36,93 @@
   insertAfter('finance', { id: 'business', icon: '🎪', name: 'Events & Shop' });
 
   // =====================================================================
+  // GROW THE ZOO (strategic plan, land, second site)
+  // =====================================================================
+  const habitatsList = P.tab_habitats;
+  P.tab_habitats = function (s) {
+    const st = subtabs('habitats', [['list', '🏞️ Habitats'], ['grow', '🗺️ Grow the zoo']]);
+    if (st.cur === 'grow') return `<h2>🗺️ Grow the Zoo</h2>${st.html}${P.growView(s)}`;
+    return habitatsList(s).replace('</h2>', '</h2>' + st.html);
+  };
+
+  P.growView = function (s) {
+    const G = ZG.Growth;
+    const p = s.plan;
+    const pr = (k) => G.PRIORITIES[k];
+    let plan = '';
+    if (p.status === 'none' || p.status === 'rejected') {
+      const pick = (P.ui.planPick = P.ui.planPick || []);
+      const chips = Object.entries(G.PRIORITIES)
+        .filter(([k]) => k !== 'second' || G.SECOND[s.zooId])
+        .map(([k, v]) => `<button class="chip ${pick.includes(k) ? 'on' : ''}" data-act="planPick" data-k="${k}" title="${esc(v.goal)}">${v.icon} ${esc(v.name)}</button>`)
+        .join('');
+      const cost = p.status === 'rejected' ? Math.round(G.planCost(s) * 0.3) : G.planCost(s);
+      plan = `<div class="card plan"><h3 style="margin-top:0">📜 Strategic master plan</h3>
+        <p>Before a zoo can buy land or open a new campus, it needs an adopted master plan. Planners draft it (about ${p.status === 'rejected' ? 2 : 5} months), the public comments on it, and then <b>${G.voteBody(s)}</b> votes.</p>
+        ${p.status === 'rejected' ? '<p class="bad">Your last plan was voted down. A revision costs 30% as much.</p>' : ''}
+        <p><b>Pick three priorities</b> (${pick.length}/3):</p><div class="swatches chips">${chips}</div>
+        ${pick.length ? `<ul class="bnotes">${pick.map((k) => `<li>${pr(k).icon} <b>${pr(k).name}</b>: goal “${esc(pr(k).goal)}”${pr(k).unlock ? ` · <b>${pr(k).unlock}</b>` : ''}</li>`).join('')}</ul>` : ''}
+        <p class="sub">Growing the footprint or adding a second site makes the vote harder. Fixing what you have and financial sustainability make it easier.</p>
+        <div class="actions">${pick.length === 3 ? btn(`📜 Hire the planners (${$(cost)})`, 'planCommission', {}, 'primary') : dis('Hire the planners', 'Pick three priorities first')}</div></div>`;
+    } else if (p.status === 'drafting') {
+      const pct = ((s.day - p.started) / Math.max(1, p.ready - p.started)) * 100;
+      plan = `<div class="card plan"><h3 style="margin-top:0">📜 Master plan: drafting</h3><p>Planners are working on ${p.priorities.map((k) => `${pr(k).icon} ${pr(k).name}`).join(', ')}.</p>${bar(pct)}<p class="sub">Draft due ${U.fmtDate(p.ready)}.</p></div>`;
+    } else if (p.status === 'review') {
+      const grp = G.voteGroup(s);
+      const w = ZG.Officials.whip(s, grp, 'plan');
+      plan = `<div class="card plan"><h3 style="margin-top:0">📜 Master plan: public comment</h3>
+        <p>Priorities: ${p.priorities.map((k) => `${pr(k).icon} ${pr(k).name}`).join(', ')}. <b>${G.voteBody(s)}</b> votes on ${U.fmtDate(p.reviewEnd)}.</p>
+        <div class="rel"><span>Public support</span>${bar(p.support)}<b>${Math.round(p.support)}</b></div>
+        <div class="whip"><b>Whip count:</b> <span class="good">${w.yes} yes</span> · <span class="warn">${w.lean} undecided</span> · <span class="bad">${w.no} no</span></div>
+        <div class="actions">${btn('🗣️ Host a community meeting ($12K)', 'planMeeting', {}, 'sm primary')}${btn('📺 Pitch it on air', 'tab', { tab: 'media' }, 'sm')}${btn('🏛️ Ask for votes', 'govGo', { sub: grp }, 'sm')}</div></div>`;
+    } else if (p.status === 'adopted') {
+      const goals = G.goalProgress(s)
+        .map((g) => `<div class="rel"><span>${pr(g.k).icon} ${esc(pr(g.k).goal)}</span>${bar(g.pct * 100)}<b>${g.done ? '✅' : Math.round(g.pct * 100) + '%'}</b></div>`)
+        .join('');
+      plan = `<div class="card plan adopted"><h3 style="margin-top:0">📜 Strategic plan: adopted ✅</h3><p class="sub">Adopted ${U.fmtDate(p.adopted)}, guides the zoo until ${U.fmtDate(p.expires)}. Having a plan helps campaigns, grants, state requests and budget asks.</p>${goals}</div>`;
+    }
+    // Land
+    const L = G.LAND[s.zooId];
+    const land = s.growth.land;
+    const lcost = G.landCost(s);
+    let landActs = '';
+    if (!land) {
+      if (!G.has(s, 'grow')) landActs = `<p class="sub">🔒 Needs an adopted plan that includes 🗺️ Grow the footprint.</p>`;
+      else {
+        const can = ZG.Econ.canAfford(s, lcost, true);
+        landActs = `<div class="actions">${can ? btn(`🗺️ Buy the land (${$(lcost)})`, 'buyLand', {}, 'primary') : dis(`Buy the land (${$(lcost)})`, 'Not enough funds')}${!can && !s.dev.campaign ? btn(`Launch a capital campaign (${$(lcost)})`, 'campaign', { goal: lcost, label: L.name }, 'sm') : ''}</div>${can ? '' : '<p class="sub">Raise it with a capital campaign, a state request, a donor ask or your partner organization.</p>'}`;
+      }
+    } else if (land.status === 'acquiring') {
+      landActs = `<p>🚧 Permits, demolition and grading underway. Ready ${U.fmtDate(land.done)}.</p>${bar(((s.day - land.started) / (land.done - land.started)) * 100)}`;
+    } else landActs = `<p class="good">✅ Opened ${U.fmtDate(land.opened)}: three new habitat lots at the back of the zoo.</p>`;
+    const landCard = `<div class="card"><h3 style="margin-top:0">🗺️ Buy land: ${esc(L.name)}</h3><p>${esc(L.story)}</p><p class="sub">Adds <b>three large habitat lots</b> (about ${U.num(Math.round(ZG.zoo(s).avgPlot * 1.4))} m² each) · ${$(lcost)} · about ${Math.round(L.days / 30)} months</p>${landActs}</div>`;
+    // Second site
+    const opts = G.secondOptions(s);
+    let second = '';
+    if (!opts) second = `<div class="card"><h3 style="margin-top:0">🏞️ Second site</h3><p class="sub">In this game a second campus is an option for the city- and federally-run zoos (Honolulu, Houston and the National Zoo).</p></div>`;
+    else {
+      const S2 = s.growth.second;
+      if (S2 && S2.status === 'building') second = `<div class="card"><h3 style="margin-top:0">🏗️ ${esc(S2.name)}</h3><p>Under construction, opening ${U.fmtDate(S2.done)}.</p>${bar(((s.day - S2.started) / (S2.done - S2.started)) * 100)}</div>`;
+      else if (S2 && S2.status === 'open') {
+        const site = s.sites.find((x) => x.name === S2.name);
+        const habs = s.habitats.filter((h) => site && h.site === site.id);
+        second = `<div class="card adopted"><h3 style="margin-top:0">🏞️ ${esc(S2.name)} ✅</h3><p>${S2.kind === 'public' ? `Open to the public · ${U.num(site.ytd || 0)} visitors this year` : 'Conservation & breeding center (off-exhibit), boosting your AZA standing every month'} · ${habs.length} habitat${habs.length === 1 ? '' : 's'} built, ${habs.filter((h) => s.animals.some((a) => a.hab === h.id)).length} stocked.</p><p class="sub">Its lots are listed in the Habitats tab. Click one to plan a habitat with the architect.</p></div>`;
+      } else {
+        const locked = !G.has(s, 'second');
+        second = `<h3>🏞️ Open a second site</h3>${locked ? '<p class="sub">🔒 Needs an adopted plan that includes 🏞️ Open a second site.</p>' : ''}` +
+          Object.entries(opts)
+            .map(([k, o]) => {
+              const can = ZG.Econ.canAfford(s, o.cost, true);
+              return `<div class="card"><div class="row"><b>${k === 'public' ? '🦓' : '🧬'} ${esc(o.name)}</b><span>${$(o.cost)}</span></div><p>${esc(o.story)}</p><p class="sub">${k === 'public' ? '4 large habitat sites with their own visitors, admissions and costs' : '3 off-exhibit breeding complexes: no visitors, lower running costs, a steady AZA boost'} · about ${Math.round(o.days / 30)} months to build</p>
+                <div class="actions">${locked ? '' : can ? btn('Break ground', 'startSecond', { kind: k }, 'primary') : dis('Break ground', 'Not enough funds')}${!locked && !can && !s.dev.campaign ? btn(`Launch a capital campaign (${$(o.cost)})`, 'campaign', { goal: o.cost, label: o.name }, 'sm') : ''}</div></div>`;
+            })
+            .join('');
+      }
+    }
+    return `${plan}${landCard}${second}`;
+  };
+
+  // =====================================================================
   // FUNDRAISING
   // =====================================================================
   P.tab_fundraising = function (s) {
@@ -370,6 +457,27 @@
     const r = ZG.Habitats.rename(s, +d.hab, i ? i.value : '');
     if (r.ok) P.ui.renaming = null;
     return r;
+  };
+  A.planPick = (s, d) => {
+    const pick = (P.ui.planPick = P.ui.planPick || []);
+    const i = pick.indexOf(d.k);
+    if (i >= 0) pick.splice(i, 1);
+    else if (pick.length < 3) pick.push(d.k);
+    else return { ok: false, msg: 'Three priorities max. Unselect one first.' };
+    return null;
+  };
+  A.planCommission = (s) => {
+    const r = ZG.Growth.commission(s, P.ui.planPick || []);
+    if (r.ok) P.ui.planPick = [];
+    return r;
+  };
+  A.planMeeting = (s) => ZG.Growth.meeting(s);
+  A.buyLand = (s) => ZG.Growth.buyLand(s);
+  A.startSecond = (s, d) => ZG.Growth.startSecond(s, d.kind);
+  A.govGo = (s, d) => {
+    P.ui.tab = 'government';
+    P.ui.sub.government = d.sub;
+    return null;
   };
   A.treat = (s, d) => ZG.Animals.treat(s, +d.aid, d.lvl);
 
