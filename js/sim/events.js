@@ -46,7 +46,7 @@
     const v = d.make(s, e.ctx) || { title: 'Resolved', text: 'This situation resolved itself.', choices: [{ label: 'OK', apply: () => '' }] };
     v.cat = d.cat;
     for (const c of v.choices) {
-      if (c.cost && !c.disabled && !ZG.Econ.canAfford(s, c.cost, c.capital)) {
+      if (c.cost && !c.disabled && !ZG.Econ.canAfford(s, c.cost - ZG.Reserve.available(s), c.capital)) {
         c.disabled = true;
         c.why = 'Not enough funds (incl. credit line)';
       }
@@ -73,6 +73,7 @@
     s.eventQueue.shift();
     if (c.cost) (c.capital ? payCap : pay)(s, c.costCat || 'other', c.cost);
     const result = (c.apply && c.apply(s, e.ctx)) || '';
+    ZG.Reserve.afterEvent(s, e.id, v.title || '', c.cost || 0);
     s.log.unshift({ day: s.day, title: v.title, choice: c.label, result, icon: v.icon || '📌' });
     if (s.log.length > 120) s.log.pop();
     return { title: v.title, icon: v.icon, result, choice: c.label };

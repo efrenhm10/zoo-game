@@ -96,6 +96,7 @@ Each concept shows its cost, build time, guest appeal, welfare boost, upkeep, ca
 - **Habitats & construction.** Design new habitats on empty lots (biome, design tier, climate control), renovate worn ones, and improve theming. Public zoos build more slowly because of procurement.
 - **Infrastructure & deferred maintenance.** Water mains, power, life-support, the animal hospital, perimeter fence and more all decay. Underfund maintenance and they fail at emergency prices.
 - **A budget that answers back.** The Budget tab projects the next 12 months line by line. Drag any slider (admission, memberships, marketing, maintenance, enrichment, conservation) and the projected spending, revenue and surplus or deficit update as you drag, with plain-language warnings about the side effects. Cutting marketing, for example, saves money but costs visitors.
+- **Rainy-day fund.** Move money into an operating reserve with one-off deposits or a monthly auto-save. It earns interest and raises your boss's confidence (boards want 3 to 6 months of expenses in reserve), but it stays locked except in an emergency: a disaster, breakdown, outbreak, budget cut, shutdown, recession or cash crisis. With auto-cover on, it automatically pays emergency costs that would otherwise push you into debt.
 - **Money.** Admission and membership pricing, marketing, maintenance, enrichment and conservation budgets; a restricted capital fund alongside operating cash; a credit line with interest; monthly and yearly P&L with charts.
 - **Staff.** Seven departments with workload-based requirements, hiring delays (months for city and federal zoos), morale, burnout and layoffs.
 - **Fundraising.** Cultivate major-gift prospects and make the ask, run capital campaigns, host galas, apply for grants, and weigh corporate sponsorships against reputational risk (an oil company or a palm-oil brand pays well, but at a cost).
@@ -127,6 +128,7 @@ js/sim/merch.js       gift shop pricing, product lines, brand collaborations
 js/sim/diagnose.js    why a habitat is struggling and how to fix it
 js/sim/requests.js    requesting animals from AZA / SSP coordinators
 js/sim/growth.js      strategic master plan, land purchases, second sites
+js/sim/reserve.js     rainy-day fund (operating reserve)
 js/ui/portraits.js    roundel portraits rendered from the 3D models
 js/ui/                panels, creator, app (UI shell)
 js/vendor/            three.min.js (r149, MIT)

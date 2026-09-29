@@ -6,7 +6,7 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const files = ['js/core/util.js', 'js/data/species.js', 'js/data/names.js', 'js/data/zoos.js', 'js/data/director.js',
   'js/sim/animals.js', 'js/sim/staff.js', 'js/sim/infra.js', 'js/sim/habitats.js', 'js/sim/economy.js', 'js/sim/aza.js',
-  'js/sim/politics.js', 'js/sim/development.js', 'js/sim/design.js', 'js/sim/events.js', 'js/sim/donors.js', 'js/sim/officials.js', 'js/sim/partner.js', 'js/sim/media.js', 'js/sim/zooevents.js', 'js/sim/merch.js', 'js/sim/diagnose.js', 'js/sim/requests.js', 'js/sim/growth.js', 'js/sim/sim.js'];
+  'js/sim/politics.js', 'js/sim/development.js', 'js/sim/design.js', 'js/sim/events.js', 'js/sim/donors.js', 'js/sim/officials.js', 'js/sim/partner.js', 'js/sim/media.js', 'js/sim/zooevents.js', 'js/sim/merch.js', 'js/sim/diagnose.js', 'js/sim/requests.js', 'js/sim/growth.js', 'js/sim/reserve.js', 'js/sim/sim.js'];
 const ctx = { console, Math, JSON, Date };
 ctx.globalThis = ctx;
 vm.createContext(ctx);

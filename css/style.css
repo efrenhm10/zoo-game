@@ -409,3 +409,5 @@ tr.lvl-warn td:first-child { box-shadow: inset 4px 0 0 var(--warn); }
 .chips { gap: 6px; }
 th.sitehead { text-align: left; padding-top: 12px; color: var(--olive2); font-size: 0.85rem; }
 th.sitehead small { color: var(--muted); font-weight: 600; }
+.card.rainy { border-color: #6f9fc9; background: #f5f9fd; }
+.card.rainy .warnbox .actions { margin-top: 5px; }

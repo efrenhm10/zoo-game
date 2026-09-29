@@ -479,6 +479,12 @@
     P.ui.sub.government = d.sub;
     return null;
   };
+  A.reserveIn = (s, d) => ZG.Reserve.deposit(s, +d.amt);
+  A.reserveOut = (s, d) => ZG.Reserve.withdraw(s, +d.amt);
+  A.reserveCover = (s) => {
+    s.reserve.autoCover = !s.reserve.autoCover;
+    return { ok: true, msg: `Auto-cover ${s.reserve.autoCover ? 'on' : 'off'}.` };
+  };
   A.treat = (s, d) => ZG.Animals.treat(s, +d.aid, d.lvl);
 
   // Habitat fixes

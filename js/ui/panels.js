@@ -490,6 +490,7 @@
       <div class="kpis"><div><small>Operating cash</small><b class="${s.cash < 0 ? 'bad' : ''}">${$(s.cash)}</b></div><div><small>Capital fund (restricted)</small><b>${$(s.capital)}</b></div><div><small>Credit line</small><b>${$(ZG.Econ.creditLimit(s))}</b></div></div>
       <div id="budget-proj">${P.budgetProjection(s)}</div>
       <p class="sub">Drag a slider to see the effect on next year's budget. Changes take effect when you let go.</p>
+      ${P.reserveCard(s)}
       <h3>Revenue policy</h3>${admission}
       ${P.slider(s, 'memberPrice', 'Family membership price', 30, Math.round(Z.refs.memberPrice * 2), 1)}
       <h3>Spending policy</h3>
@@ -505,6 +506,34 @@
   };
 
   // =====================================================================
+  // Rainy-day fund card.
+  P.reserveCard = function (s) {
+    const RF = ZG.Reserve, r = s.reserve;
+    const month = RF.monthCost(s);
+    const months = RF.months(s);
+    const em = RF.emergency(s);
+    const round = (v) => Math.max(1000, Math.round(v / 1000) * 1000);
+    const deposits = [0.25, 1]
+      .map((f) => round(month * f))
+      .map((a) => (s.cash >= a ? btn(`+ ${$(a)}`, 'reserveIn', { amt: a }, 'sm') : ''))
+      .join('');
+    const extra = Math.round((s.cash - month) / 1000) * 1000;
+    const autoOpts = [0, 0.02, 0.05, 0.1, 0.2].map((f) => round(month * f) * (f ? 1 : 0));
+    const autoSel = `<select data-reserveauto="1">${autoOpts.map((v) => `<option value="${v}" ${Math.abs(v - r.auto) < 500 ? 'selected' : ''}>${v ? `${$(v)} / month` : 'Off'}</option>`).join('')}</select>`;
+    return `<div class="card rainy"><h3 style="margin-top:0">🌧️ Rainy-day fund</h3>
+      <p class="sub">${esc(RF.NAMES[s.zooId])}. Money you set aside on purpose. It earns about ${(RF.RATE * 100).toFixed(1)}% a year and reassures your boss, but you can only draw on it in an emergency.</p>
+      <div class="kpis"><div><small>Balance</small><b>${$(r.bal)}</b></div><div><small>Covers</small><b class="${months >= 3 ? 'good' : months >= 1 ? 'warn' : 'bad'}">${months.toFixed(1)} months</b></div><div><small>Status</small><b class="${em ? 'warn' : 'good'}">${em ? '🔓 Open' : '🔒 Locked'}</b></div></div>
+      <div class="rel"><span>Toward 3 months</span>${bar(Math.min(100, (months / 3) * 100))}<b>${Math.round(Math.min(100, (months / 3) * 100))}%</b></div>
+      <p class="sub">Best practice for zoos is 3 to 6 months of operating expenses (${$(month * 3)}–${$(month * 6)}).</p>
+      <div class="actions"><b>Deposit:</b>${deposits}${extra > 0 ? btn(`Everything above 1 month of cash (${$(extra)})`, 'reserveIn', { amt: extra }, 'sm') : ''}${!deposits && extra <= 0 ? '<span class="sub">Not enough operating cash to save right now.</span>' : ''}</div>
+      <div class="actions"><b>Auto-save:</b> ${autoSel} <span class="sub">moved from operating cash each month</span></div>
+      <div class="actions">${btn(r.autoCover ? '✅ Auto-cover emergencies: on' : '⬜ Auto-cover emergencies: off', 'reserveCover', {}, 'sm ' + (r.autoCover ? 'on' : ''))}<span class="sub">In an emergency, the fund pays automatically so you don't go into debt.</span></div>
+      ${em
+        ? `<div class="warnbox">🔓 Open because of <b>${esc(em)}</b>. <div class="actions">${s.cash < 0 ? btn(`Cover the cash shortfall (${$(Math.min(-s.cash, r.bal))})`, 'reserveOut', { amt: Math.round(-s.cash) }, 'sm primary') : ''}${btn(`Withdraw 1 month (${$(Math.min(round(month), r.bal))})`, 'reserveOut', { amt: round(month) }, 'sm')}</div></div>`
+        : '<p class="sub">🔒 Locked. It opens during disasters, breakdowns, outbreaks, budget cuts, shutdowns, recessions or a cash crisis.</p>'}
+      ${r.log.length ? `<details><summary>History</summary><ul class="plain">${r.log.map((l) => `<li><small>${U.fmtDate(l.day)}</small> ${esc(l.text)}</li>`).join('')}</ul></details>` : ''}</div>`;
+  };
+
   // The 12-month budget plan. `over` holds slider values being dragged but not yet committed.
   P.budgetProjection = function (s, over) {
     const Z = ZG.zoo(s);

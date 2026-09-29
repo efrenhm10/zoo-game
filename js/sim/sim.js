@@ -110,6 +110,7 @@
     if (!s.merch) ZG.Merch.init(s);
     ZG.Requests.init(s);
     ZG.Growth.init(s);
+    ZG.Reserve.init(s);
   };
 
   Sim.reindex = function (s) {
@@ -180,6 +181,7 @@
     ZG.Partner.monthly(s, t);
     ZG.Merch.monthly(s, t);
     ZG.Growth.monthly(s, t);
+    ZG.Reserve.monthly(s, t);
     ZG.AZA.monthly(s, t);
     ZG.AZA.refreshMarket(s);
     if (t.m === 1 && s.day > 60) ZG.AZA.generatePlan(s);
@@ -203,7 +205,8 @@
     const net = months.reduce((a, m) => a + m.net, 0);
     const budget = ZG.Econ.annualBudget(s) / 2;
     const margin = net / Math.max(1, budget);
-    const reserve = s.cash / Math.max(1, ZG.Econ.annualBudget(s) / 12);
+    // Boards like reserves: operating cash plus the rainy-day fund, in months of expenses.
+    const reserve = (s.cash + (s.reserve ? s.reserve.bal : 0)) / Math.max(1, ZG.Econ.annualBudget(s) / 12);
     let t = 55 + margin * 150 + U.clamp(reserve, -3, 4) * 3 + (s.rep - s.rep0) * 0.6 + (ZG.Animals.avgWelfare(s) - 70) * 0.4;
     if (s.acc.status === 'tabled') t -= 10;
     if (s.acc.status === 'lost') t -= 25;

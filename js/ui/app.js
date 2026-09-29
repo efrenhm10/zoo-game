@@ -154,6 +154,7 @@
     setHTML(el.statsbar, `
       <span title="Operating cash"><i>💵</i><b class="${s.cash < 0 ? 'bad' : ''}">${U.money(s.cash)}</b></span>
       <span title="Capital fund (restricted)"><i>🏗️</i><b>${U.money(s.capital)}</b></span>
+      ${s.reserve && s.reserve.bal > 0 ? `<span title="Rainy-day fund (emergencies only)"><i>🌧️</i><b>${U.money(s.reserve.bal)}</b></span>` : ''}
       <span title="Guests today"><i>👥</i><b>${U.num(s.today.guests)}</b></span>
       <span title="Public reputation ${Math.round(s.rep)}/100" class="stars">${stars(s.rep)}</span>
       <span title="Animal welfare"><i>🐾</i><b class="${cl(w)}">${Math.round(w)}</b></span>
@@ -464,6 +465,12 @@
         renderPanel(true);
       }
       if (t.dataset && (t.dataset.acq || t.dataset.rechab)) t.blur();
+      if (t.dataset && t.dataset.reserveauto) {
+        s.reserve.auto = +t.value;
+        toast(+t.value ? `Auto-saving ${U.money(+t.value)} a month into the rainy-day fund.` : 'Auto-save off.');
+        t.blur();
+        renderPanel(true);
+      }
       if (t.dataset && t.dataset.req) {
         const R = (ZG.Panels.ui.req = ZG.Panels.ui.req || {});
         R[t.dataset.req] = t.dataset.req === 'sp' ? t.value : +t.value;
