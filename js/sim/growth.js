@@ -229,7 +229,7 @@
     s.growth.land.opened = s.day;
     s.board = U.clamp(s.board + 4, 0, 100);
     s.novelty = Math.min(0.8, s.novelty + 0.05);
-    ZG.Events.queue(s, 'zoo_event_result', { icon: '🗺️', title: 'New land is ready', html: `<p>The ${G.LAND[s.zooId].name} is graded, fenced and connected to the path network. <b>Three large new habitat lots</b> are open at the back of the zoo.</p><p>Click one on the map or in the Habitats tab to meet with the architect.</p>` });
+    ZG.Events.queue(s, 'zoo_event_result', { icon: '🗺️', title: 'New land is ready', html: `${s.growth.landNaming ? `<p>Welcome to the <b>${s.growth.landNaming.short} Wildlands</b>, named for the lead donor.</p>` : ''}<p>The ${G.LAND[s.zooId].name} is graded, fenced and connected to the path network. <b>Three large new habitat lots</b> are open at the back of the zoo.</p><p>Click one on the map or in the Habitats tab to meet with the architect.</p>` });
   };
 
   // ---------------- Second site ----------------
@@ -251,6 +251,7 @@
   G.finishSecond = function (s) {
     const S2 = s.growth.second;
     const Z = ZG.zoo(s);
+    if (s.growth.secondNaming) S2.name = `${s.growth.secondNaming.short} ${S2.name}`;
     const site = { id: s.sites.length + 2, name: S2.name, kind: S2.kind, opened: s.day, ytd: 0 };
     s.sites.push(site);
     const n = S2.kind === 'public' ? 4 : 3;

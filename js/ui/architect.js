@@ -134,8 +134,8 @@
     if (save) {
       s.plots[st.plot].savedDesign = o;
       let msg = `Saved “${o.name}”. You can build it from the lot whenever the money is there.`;
-      if (!s.dev.campaign) {
-        const r = ZG.Dev.startCampaign(s, o.cost, o.name);
+      if (ZG.Campaigns.canStart(s) && !ZG.Campaigns.forPlot(s, st.plot)) {
+        const r = ZG.Dev.startCampaign(s, o.cost, o.name, { kind: 'plot', id: st.plot });
         if (r.ok) msg += ' A capital campaign has been launched for it.';
       }
       ZG.App.hideModal();

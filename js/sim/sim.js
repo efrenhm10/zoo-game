@@ -112,6 +112,7 @@
     ZG.Growth.init(s);
     ZG.Reserve.init(s);
     ZG.Field.init(s);
+    ZG.Campaigns.init(s);
     // Older saves only counted SSP-recommended births; credit healthy SSP births already on the grounds.
     if (!s.stats.birthsV2) {
       s.stats.birthsV2 = true;

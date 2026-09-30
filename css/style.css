@@ -425,3 +425,7 @@ th.sitehead small { color: var(--muted); font-weight: 600; }
 .ssptag { display: inline-block; margin-top: 3px; font-size: 0.72rem; font-weight: 800; padding: 1px 8px; border-radius: 9px; background: #eef3dc; color: var(--olive2); cursor: pointer; }
 .ssptag.separate { background: #fdecea; color: var(--bad); }
 .ssptag.contra { background: #f1edf7; color: #6a4f8f; }
+.card.campaign { border-color: var(--pink2); }
+.card.campaign h4 { margin: 10px 0 4px; font-size: 0.8rem; text-transform: uppercase; color: var(--olive2); }
+.lead { border-top: 1px dashed var(--line); padding: 7px 0; }
+.lead.done { opacity: 0.75; }

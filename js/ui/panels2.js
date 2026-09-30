@@ -284,7 +284,7 @@
       if (!G.has(s, 'grow')) landActs = `<p class="sub">🔒 Needs an adopted plan that includes 🗺️ Grow the footprint.</p>`;
       else {
         const can = ZG.Econ.canAfford(s, lcost, true);
-        landActs = `<div class="actions">${can ? btn(`🗺️ Buy the land (${$(lcost)})`, 'buyLand', {}, 'primary') : dis(`Buy the land (${$(lcost)})`, 'Not enough funds')}${!can && !s.dev.campaign ? btn(`Launch a capital campaign (${$(lcost)})`, 'campaign', { goal: lcost, label: L.name }, 'sm') : ''}</div>${can ? '' : '<p class="sub">Raise it with a capital campaign, a state request, a donor ask or your partner organization.</p>'}`;
+        landActs = `<div class="actions">${can ? btn(`🗺️ Buy the land (${$(lcost)})`, 'buyLand', {}, 'primary') : dis(`Buy the land (${$(lcost)})`, 'Not enough funds')}${ZG.Campaigns.canStart(s) && !ZG.Campaigns.list(s).some((c) => c.target.kind === 'land') ? btn(`📣 Launch a capital campaign (${$(lcost)})`, 'campaign', { goal: lcost, label: L.name, tkind: 'land' }, 'sm') : ''}</div>${can ? '' : '<p class="sub">Raise it with a capital campaign, a state request, a donor ask or your partner organization.</p>'}`;
       }
     } else if (land.status === 'acquiring') {
       landActs = `<p>🚧 Permits, demolition and grading underway. Ready ${U.fmtDate(land.done)}.</p>${bar(((s.day - land.started) / (land.done - land.started)) * 100)}`;
@@ -308,7 +308,7 @@
             .map(([k, o]) => {
               const can = ZG.Econ.canAfford(s, o.cost, true);
               return `<div class="card"><div class="row"><b>${k === 'public' ? '🦓' : '🧬'} ${esc(o.name)}</b><span>${$(o.cost)}</span></div><p>${esc(o.story)}</p><p class="sub">${k === 'public' ? '4 large habitat sites with their own visitors, admissions and costs' : '3 off-exhibit breeding complexes: no visitors, lower running costs, a steady AZA boost'} · about ${Math.round(o.days / 30)} months to build</p>
-                <div class="actions">${locked ? '' : can ? btn('Break ground', 'startSecond', { kind: k }, 'primary') : dis('Break ground', 'Not enough funds')}${!locked && !can && !s.dev.campaign ? btn(`Launch a capital campaign (${$(o.cost)})`, 'campaign', { goal: o.cost, label: o.name }, 'sm') : ''}</div></div>`;
+                <div class="actions">${locked ? '' : can ? btn('Break ground', 'startSecond', { kind: k }, 'primary') : dis('Break ground', 'Not enough funds')}${!locked && ZG.Campaigns.canStart(s) && !ZG.Campaigns.list(s).some((c) => c.target.kind === 'second') ? btn(`📣 Launch a capital campaign (${$(o.cost)})`, 'campaign', { goal: o.cost, label: o.name, tkind: 'second' }, 'sm') : ''}</div></div>`;
             })
             .join('');
       }
@@ -322,7 +322,7 @@
   P.tab_fundraising = function (s) {
     const Z = ZG.zoo(s);
     const pd = ZG.Partner.def(s);
-    const st = subtabs('fundraising', [['donors', '💎 Top donors'], ['partner', `🤝 ${pd.kind === 'society' ? pd.name.replace(/ \(.*\)/, '') : 'Endowment'}`], ['pipeline', '🌱 Prospects & campaign'], ['grants', '📑 Grants & sponsors']]);
+    const st = subtabs('fundraising', [['donors', '💎 Top donors'], ['partner', `🤝 ${pd.kind === 'society' ? pd.name.replace(/ \(.*\)/, '') : 'Endowment'}`], ['pipeline', '📣 Campaigns'], ['grants', '📑 Grants & sponsors']]);
     let body = '';
     if (st.cur === 'donors') body = P.donorsView(s);
     else if (st.cur === 'partner') body = P.partnerView(s);
@@ -342,9 +342,9 @@
           .map(([k, T]) => (can ? btn(`${T.icon} ${T.name}${T.cost ? ` (${$(T.cost)})` : ''}`, 'donorTouch', { id: d.id, type: k }, 'sm') : ''))
           .join('');
         const purposes = Object.entries(DN.PURPOSES)
-          .filter(([k]) => (k !== 'campaign' || s.dev.campaign) && (k !== 'planned' || !d.planned))
+          .filter(([k]) => k !== 'planned' || !d.planned)
           .map(([k, v]) => `<option value="${k}">${esc(v)}</option>`)
-          .join('');
+          .join('') + ZG.Campaigns.list(s).map((c) => `<option value="camp:${c.id}">Campaign: ${esc(c.label)}</option>`).join('');
         const askReady = s.day - d.lastAsk >= 90;
         const levels = DN.askLevels(d)
           .map((l) => (askReady ? btn(`Ask ${$(l.amt)}`, 'donorAsk', { id: d.id, lvl: l.lvl }, 'sm ' + (l.lvl === 'major' ? 'primary' : '')) : ''))
@@ -393,13 +393,38 @@
       .map((p) => `<div class="card"><div class="row"><b>${esc(p.name)}</b><span>capacity ~${$(p.cap)}</span></div><small>${D.passionText(p.passion)} · readiness</small>${bar(p.ready)}
         <div class="actions">${btn(p.cultivating ? '☕ Cultivating ($1.5K/mo)' : 'Start cultivating', 'cultivate', { pid: p.id }, 'sm ' + (p.cultivating ? 'on' : ''))}${btn(`Ask ${$(p.cap * 0.5)}`, 'ask', { pid: p.id, lvl: 'low' }, 'sm')}${btn(`Ask ${$(p.cap)}`, 'ask', { pid: p.id, lvl: 'mid' }, 'sm')}${btn(`Ask ${$(p.cap * 1.6)}`, 'ask', { pid: p.id, lvl: 'high' }, 'sm')}</div></div>`)
       .join('');
-    const c = s.dev.campaign;
-    const camp = c
-      ? `<div class="card"><b>📣 ${esc(c.label)}</b> — ${$(c.raised)} of ${$(c.goal)}${bar(c.raised, c.goal)}<small>Ends ${U.fmtDate(c.end)} · momentum ${Math.round((c.momentum || 0) * 100)}% ${c.momentum > 0.05 ? '🔥' : ''}</small>
-         <p class="sub">Go on the news or the radio (📺 Media tab) to build momentum and bring in pledges.</p><div class="actions">${btn('📺 Go on air for the campaign', 'tab', { tab: 'media' }, 'sm primary')}</div></div>`
-      : `<p>No active campaign. ${btn(`Launch campaign to cut backlog (${$(ZG.Infra.backlog(s) * 0.5)})`, 'campaign', { goal: Math.round(ZG.Infra.backlog(s) * 0.5), label: 'Renew Our Zoo' })} <br><small>Or launch one for a specific new habitat from the build panel.</small></p>`;
+    const C = ZG.Campaigns;
+    const kindName = { plot: '🏞️ New habitat', hab: '🛠️ Habitat transformation', land: '🗺️ Land purchase', second: '🏞️ Second site', backlog: '🔧 Repairs', general: '📣 General' };
+    const camp = C.list(s)
+      .map((c) => {
+        const naming = c.naming
+          ? `<p class="good">🏷️ Naming rights: <b>${esc(c.naming.name)}</b> (${$(c.naming.amount)}). ${esc(C.namingText(s, c))}</p>`
+          : `<p class="sub">🏷️ Naming rights available for a gift of <b>${$(c.goal * C.NAMING)}</b> (70% of the goal). A ${$(c.goal * C.LEADERSHIP)} leadership gift names the viewing plaza${c.plaza ? ` (taken by ${esc(c.plaza.name)})` : ''}.</p>`;
+        const leads = c.leads
+          .map((L) => {
+            const ready = s.day - (L.lastPitch || -999) >= 21;
+            const askReady = !L.done && s.day - (L.lastAsk || -999) >= 180;
+            const oN = Math.round(C.odds(s, c, L, 'naming') * 100), oL = Math.round(C.odds(s, c, L, 'leadership') * 100);
+            const kindTag = L.kind === 'corp' ? `🏢 ${esc(L.ind)}${L.risk > 0.5 ? ' · <b class="bad">reputational risk</b>' : ''}` : L.kind === 'donor' ? '💎 one of your top donors' : '🏡 new major-gift prospect';
+            return `<div class="lead ${L.done ? 'done' : ''}"><div class="donor-top">${face(L.name, hueOf(L.name))}<div class="dmeta"><b>${esc(L.name)}</b><small>${kindTag} · could give ~${$(L.cap)}${L.trait ? ` · ${ZG.Donors.TRAITS[L.trait] ? ZG.Donors.TRAITS[L.trait].name : ''}` : ''}</small></div></div>
+              ${L.done ? `<p class="good">✅ Gave a ${L.done === 'naming' ? 'naming' : 'leadership'} gift.</p>` : `<div class="rel"><span>Readiness</span>${bar(L.ready)}<b>${L.ready}</b></div>
+              <div class="actions">${ready ? btn(`☕ Pitch meeting (${$(L.kind === 'corp' ? 3000 : 1500)})`, 'campPitch', { cid: c.id, key: L.key }, 'sm') : `<span class="sub">Next meeting ${U.fmtDate(L.lastPitch + 21)}</span>`}
+              ${askReady ? (!c.naming ? btn(`🏷️ Ask for naming gift ${$(c.goal * C.NAMING)} (${oN}%)`, 'campAsk', { cid: c.id, key: L.key, lvl: 'naming' }, 'sm primary') : '') + (!c.plaza ? btn(`Ask leadership gift ${$(c.goal * C.LEADERSHIP)} (${oL}%)`, 'campAsk', { cid: c.id, key: L.key, lvl: 'leadership' }, 'sm') : '') : !L.done ? `<span class="sub">Can ask again ${U.fmtDate(L.lastAsk + 180)}</span>` : ''}</div>`}</div>`;
+          })
+          .join('');
+        return `<div class="card campaign"><div class="row"><b>📣 ${esc(c.label)}</b><span class="sub">${kindName[c.target.kind] || ''}</span></div>
+          <div class="rel"><span>${$(c.raised)} of ${$(c.goal)}</span>${bar(c.raised, c.goal)}<b>${Math.round((c.raised / c.goal) * 100)}%</b></div>
+          <small>Ends ${U.fmtDate(c.end)} · momentum ${Math.round((c.momentum || 0) * 100)}%${c.momentum > 0.3 ? ' 🔥' : ''}</small>
+          ${naming}<h4>Lead prospects</h4>${leads}
+          <div class="actions">${btn('📺 Pitch it on air', 'tab', { tab: 'media' }, 'sm')}</div></div>`;
+      })
+      .join('');
+    const n = C.list(s).length;
+    const starters = C.canStart(s)
+      ? `<div class="actions">${!C.list(s).some((c) => c.target.kind === 'backlog') ? btn(`🔧 Launch a “Renew Our Zoo” repair campaign (${$(ZG.Infra.backlog(s) * 0.5)})`, 'campaign', { goal: Math.round(ZG.Infra.backlog(s) * 0.5), label: 'Renew Our Zoo', tkind: 'backlog' }, 'sm') : ''}</div><p class="sub">To raise money for a new habitat, design it with the architect and save it, then launch its campaign from the lot. Land, second sites and habitat transformations have campaign buttons in their own panels.</p>`
+      : `<p class="sub">You're running ${C.MAX} campaigns, the most your development team can handle.</p>`;
     const galaReady = s.day - s.dev.lastGala >= 300;
-    return `<h3>Capital campaign</h3>${camp}
+    return `<h3>Capital campaigns (${n}/${C.MAX})</h3>${camp || '<p class="sub">No campaigns running.</p>'}${starters}
       <h3>Annual gala</h3><p>${galaReady ? btn(`🥂 Host the annual gala (${$(ZG.zoo(s).donorBase * 0.06)})`, 'gala') : `Next gala available ${U.fmtDate(s.dev.lastGala + 300)}`}</p>
       <h3>New major-gift prospects</h3><p class="sub">People who give become part of your donor roster.</p>${pros || '<p>No prospects right now. More development staff finds more.</p>'}`;
   };
@@ -711,6 +736,13 @@
     r.status = 'accepted';
     return { ok: true, msg: 'Both are on contraception. The coordinator would still prefer they live apart.' };
   };
+  A.campGo = () => {
+    P.ui.tab = 'fundraising';
+    P.ui.sub.fundraising = 'pipeline';
+    return null;
+  };
+  A.campPitch = (s, d) => ZG.Campaigns.pitch(s, +d.cid, d.key);
+  A.campAsk = (s, d) => ZG.Campaigns.ask(s, +d.cid, d.key, d.lvl);
   A.treat = (s, d) => ZG.Animals.treat(s, +d.aid, d.lvl);
 
   // Habitat fixes

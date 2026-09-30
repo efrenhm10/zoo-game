@@ -201,7 +201,8 @@
       if (g.type === 'contract' && U.dateOf(s.day).y >= g.contractYear - 1) return { key: 'contract', text: 'renewing the management agreement' };
     }
     if (s.plan && s.plan.status === 'review' && ZG.Growth.voteGroup(s) === group) return { key: 'plan', text: 'adopting your strategic master plan' };
-    if (group === 'board' && s.dev.campaign) return { key: 'campaign', text: `the “${s.dev.campaign.label}” campaign` };
+    const camp = ZG.Campaigns.primary(s);
+    if (group === 'board' && camp) return { key: 'campaign', text: `the “${camp.label}” campaign` };
     return null;
   };
 

@@ -39,9 +39,10 @@
     if (p.passion.kind === 'conservation') odds += (s.policy.conservation / ZG.zoo(s).refs.conservation - 1) * 0.2;
     s.dev.prospects.splice(s.dev.prospects.indexOf(p), 1);
     if (U.rand(s) < odds) {
-      const toCapital = !!s.dev.campaign || p.passion.kind === 'capital';
+      const camp = ZG.Campaigns.primary(s);
+      const toCapital = !!camp || p.passion.kind === 'capital';
       ZG.Econ.earn(s, 'donations', amt, toCapital);
-      if (s.dev.campaign) s.dev.campaign.raised += amt;
+      if (camp) camp.raised += amt;
       if (ZG.Donors && s.donors) ZG.Donors.addFromProspect(s, p, amt);
       s.board = U.clamp(s.board + Math.min(6, amt / ZG.zoo(s).majorGiftScale * 2), 0, 100);
       ZG.Sim.news(s, `🎁 ${p.name} committed ${U.money(amt)}${toCapital ? ' to the capital fund' : ''}!`, 'good');
@@ -53,13 +54,7 @@
     return { ok: true, msg: partial ? `They declined, but gave ${U.money(partial)}.` : 'They declined.', won: false };
   };
 
-  D.startCampaign = function (s, goal, label) {
-    if (s.dev.campaign) return { ok: false, msg: 'A campaign is already running.' };
-    s.dev.campaign = { goal, raised: 0, label, start: s.day, end: s.day + 365 * 3 };
-    ZG.Econ.spend(s, 'events', goal * 0.02);
-    ZG.Sim.news(s, `📣 Capital campaign launched: "${label}" — goal ${U.money(goal)}.`, 'info');
-    return { ok: true, msg: 'Campaign launched (2% of goal spent on feasibility study & materials).' };
-  };
+  D.startCampaign = (s, goal, label, target) => ZG.Campaigns.start(s, goal, label, target);
 
   D.gala = function (s) {
     const Z = ZG.zoo(s);
@@ -68,8 +63,9 @@
     ZG.Econ.spend(s, 'events', cost);
     s.dev.lastGala = s.day;
     const net = cost * U.rf(s, 1.8, 3.6) * U.clamp(s.rep / 70, 0.5, 1.3) * s.economy * ZG.mod(s, 'fundraising');
-    ZG.Econ.earn(s, 'events', net, !!s.dev.campaign);
-    if (s.dev.campaign) s.dev.campaign.raised += net;
+    const camp = ZG.Campaigns.primary(s);
+    ZG.Econ.earn(s, 'events', net, !!camp);
+    if (camp) camp.raised += net;
     s.board = U.clamp(s.board + 2, 0, 100);
     D.newProspect(s);
     ZG.Sim.news(s, `🥂 The annual gala raised ${U.money(net)} (cost ${U.money(cost)}). A new major-gift prospect surfaced.`, 'good');
@@ -159,24 +155,7 @@
     s.dev.prospects = s.dev.prospects.filter((p) => s.day - p.created < 900);
     if (s.dev.prospects.length < 6 && U.rand(s) < 0.22 * devR * ZG.mod(s, 'fundraising')) D.newProspect(s);
     // Campaign progress: ambient campaign giving
-    const c = s.dev.campaign;
-    if (c) {
-      const trickle = c.goal * 0.012 * (1 + (c.momentum || 0)) * ZG.Growth.fundBoost(s) * devR * U.clamp(s.rep / 70, 0.5, 1.3) * s.economy * ZG.mod(s, 'fundraising');
-      ZG.Econ.earn(s, 'donations', trickle, true);
-      c.raised += trickle;
-      c.momentum = Math.max(0, (c.momentum || 0) * 0.85);
-      if (c.raised >= c.goal) {
-        s.stats.campaignsDone++;
-        s.board = U.clamp(s.board + 10, 0, 100);
-        s.rep = U.clamp(s.rep + 3, 0, 100);
-        ZG.Events.queue(s, 'campaign_done', { label: c.label, raised: c.raised });
-        s.dev.campaign = null;
-      } else if (s.day > c.end) {
-        ZG.Sim.news(s, `📉 The "${c.label}" campaign closed at ${U.money(c.raised)} of ${U.money(c.goal)}.`, 'bad');
-        s.board = U.clamp(s.board - 5, 0, 100);
-        s.dev.campaign = null;
-      }
-    }
+    ZG.Campaigns.monthly(s);
   };
 
   D.daily = function (s) {

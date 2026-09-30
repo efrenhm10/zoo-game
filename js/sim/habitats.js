@@ -98,6 +98,12 @@
     const h = H.create(s, plot, { name: o.name, biome: o.biome, tier: o.tier, climate: o.climate, features, brief: o.brief, theming: Math.min(100, H.TIERS[o.tier].theming + features.length * 3), condition: 100, construction: { days, total: days, cost } });
     if (o.species) h.intent = o.species.slice();
     plot.savedDesign = null;
+    if (plot.naming) {
+      h.namedBy = plot.naming.name;
+      if (plot.naming.kind === 'corp') h.sponsor = plot.naming.name;
+      else (h.donorName = plot.naming.name), (h.name = `${plot.naming.short} ${h.name}`);
+      plot.naming = null;
+    }
     ZG.Sim.news(s, `🏗️ Groundbreaking! ${h.name} (${H.TIERS[o.tier].name}, ${ZG.BIOMES[o.biome].name}${features.length ? ', ' + features.length + ' special features' : ''}) — ${U.money(cost)}, opening in ~${Math.round(days / 30)} months.`, 'info');
     s.rep = U.clamp(s.rep + 1, 0, 100);
     return { ok: true, msg: 'Construction started.', hab: h };

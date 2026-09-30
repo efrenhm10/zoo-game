@@ -27,7 +27,7 @@
   MD.topics = function (s) {
     const out = [];
     if (s.plan && s.plan.status === 'review') out.push({ id: 'plan', name: 'Pitch your strategic master plan', why: 'Builds public support before the vote.' });
-    if (s.dev.campaign) out.push({ id: 'campaign', name: `Pitch the “${s.dev.campaign.label}” campaign`, why: 'Boosts campaign momentum and brings in pledges.' });
+    for (const c of ZG.Campaigns.list(s)) out.push({ id: 'campaign:' + c.id, name: `Pitch the “${c.label}” campaign`, why: 'Boosts campaign momentum, brings in pledges and warms up lead prospects.' });
     const g = s.gov;
     if (g.request || g.feeProposal || (g.stateReq && !g.stateReq.passed)) out.push({ id: 'budget', name: 'Make the case for public funding', why: 'Public pressure on the politicians deciding your budget.' });
     const ev = s.zooEvents && s.zooEvents.booked.find((e) => e.day - s.day <= 45 && e.day >= s.day);
@@ -64,7 +64,7 @@
       if (O.politics) ZG.Officials.shiftAll(s, s.gov.type === 'federal' ? 'federal' : 'local', -2);
     }
     if (!gaffe) {
-      switch (topicId) {
+      switch (topicId.split(':')[0]) {
         case 'plan': {
           const g = Math.round(6 * k * (O.politics ? 1.2 : 1));
           s.plan.support = U.clamp(s.plan.support + g, 0, 100);
@@ -72,7 +72,9 @@
           break;
         }
         case 'campaign': {
-          const c = s.dev.campaign;
+          const c = ZG.Campaigns.byId(s, topic.id.split(':')[1]);
+          if (!c) break;
+          for (const L of c.leads) L.ready = Math.min(100, L.ready + Math.round(4 * k));
           c.momentum = Math.min(1.5, (c.momentum || 0) + 0.25 * k);
           const pledges = Math.round((c.goal * 0.004 * k * (O.donors ? 1.6 : 1)) / 1000) * 1000;
           ZG.Econ.earn(s, 'donations', pledges, true);

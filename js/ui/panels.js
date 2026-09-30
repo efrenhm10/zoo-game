@@ -173,6 +173,7 @@
       ${h.renovation ? `<span>🛠️ Renovating (${Math.ceil(h.renovation.days / 30)} mo left)</span>` : btn(`Renovate (${$(ren)})`, 'renovate', { hab: h.id })}
       ${h.theming < 95 && !h.renovation ? btn(`Improve theming (${$(them)})`, 'theming', { hab: h.id }) : ''}
       ${h.climate === 'none' ? btn(`Add heated building (${$(1.2e6 * Z.costMult + h.area * 250)})`, 'climate', { hab: h.id, type: 'heated' }) + btn(`Add chilled building (${$(1.2e6 * Z.costMult + h.area * 250)})`, 'climate', { hab: h.id, type: 'chilled' }) : ''}
+      ${!ZG.Habitats.renameLock(s, h) && ZG.Campaigns.canStart(s) && !ZG.Campaigns.list(s).some((c) => c.target.kind === 'hab' && c.target.id === h.id) ? btn(`📣 Renovation & naming campaign (${$(Math.max(ren, h.area * 900 * Z.costMult))})`, 'campaign', { goal: Math.round(Math.max(ren, h.area * 900 * Z.costMult)), label: `Transform ${h.name}`, tkind: 'hab', tid: h.id }, 'sm') : ''}
       ${!animals.length ? btn('Demolish', 'demolish', { hab: h.id }, 'danger') : ''}
     </div>
     <p class="sub">Capital work draws on the capital fund first, then operating cash.</p></div>`;
@@ -228,6 +229,14 @@
       ${newborns.length ? `<h3>🍼 Newborn checks</h3><ul class="plain">${newborns.map((a) => `<li>${ZG.Portraits.img(a.sp, 'portrait xs')} ${esc(a.name)} the ${spn(a.sp).name}, ${a.age} days old. Health ${Math.round(a.health)}</li>`).join('')}</ul>` : ''}</div>`;
   };
 
+  // Campaign status for a planned habitat on a lot.
+  P.plotCampaignNote = function (s, p, sd) {
+    const c = ZG.Campaigns.forPlot(s, p.id);
+    if (c) return `<p>📣 Campaign: <b>${$(c.raised)}</b> of ${$(c.goal)}${bar(c.raised, c.goal)}${c.naming ? `🏷️ Naming gift from <b>${esc(c.naming.name)}</b>. ` : `<small>A gift of ${$(c.goal * ZG.Campaigns.NAMING)}+ earns naming rights.</small> `}${btn('Open campaign', 'campGo', {}, 'sm')}</p>`;
+    if (p.naming) return `<p>🏷️ Will be named for <b>${esc(p.naming.name)}</b>.</p>`;
+    return ZG.Campaigns.canStart(s) ? `<div class="actions">${btn(`📣 Launch a capital campaign (${$(sd.cost)})`, 'campaign', { goal: sd.cost, label: sd.name, tkind: 'plot', tid: p.id }, 'sm')}</div>` : '';
+  };
+
   P.buildForm = function (s, p) {
     const Z = ZG.zoo(s);
     const b = P.ui.build && P.ui.build.plot === p.id ? P.ui.build : (P.ui.build = { plot: p.id, name: 'New Habitat', biome: 'savanna', tier: 'standard', climate: 'none' });
@@ -239,7 +248,7 @@
     const sd = p.savedDesign;
     const saved = sd
       ? `<div class="card saved"><h3>📁 Saved design: “${esc(sd.name)}”</h3><p class="sub">${esc(sd.title)} · ${ZG.BIOMES[sd.biome].name} · ${sd.features.map((f) => ZG.Design.FEATURES[f].icon).join(' ')}</p>
-        <p>Cost <b>${$(sd.cost)}</b> · ~${Math.round(sd.days / 30)} months</p><div class="actions">${btn('🏗️ Build saved design', 'buildSaved', { plot: p.id }, 'primary')}${btn('Discard', 'discardSaved', { plot: p.id }, 'sm')}</div></div>`
+        <p>Cost <b>${$(sd.cost)}</b> · ~${Math.round(sd.days / 30)} months</p>${P.plotCampaignNote(s, p, sd)}<div class="actions">${btn('🏗️ Build saved design', 'buildSaved', { plot: p.id }, 'primary')}${btn('Discard', 'discardSaved', { plot: p.id }, 'sm')}</div></div>`
       : '';
     return `<div class="card architect-cta"><h3>📐 Design a new habitat</h3>
       <p>Sit down with your exhibit architect, describe what you want in your own words, and get <b>three rendered concepts</b> with costs, timelines and welfare estimates.</p>
@@ -253,7 +262,7 @@
       <p><b>Cost: ${$(cost)}</b> · build time ~${Math.round(days / 30)} months${Z.governance === 'city' || Z.governance === 'federal' ? ' (public procurement adds time)' : ''}</p>
       <p class="sub">Funds available: capital ${$(s.capital)} + cash ${$(s.cash)} + credit line ${$(ZG.Econ.creditLimit(s))}</p>
       <p class="sub">Suitable species (max group by space): ${fits.map((sp) => `${sp.emoji} ${sp.name} (${cap(sp)})`).join(', ')}</p>
-      <div class="actions">${btn('🏗️ Break ground', 'build', { plot: p.id })}${!s.dev.campaign ? btn(`Launch capital campaign for it (${$(cost)})`, 'campaign', { goal: cost, label: b.name }) : ''}</div></details>`;
+      <div class="actions">${btn('🏗️ Break ground', 'build', { plot: p.id })}${ZG.Campaigns.canStart(s) && !ZG.Campaigns.forPlot(s, p.id) ? btn(`📣 Launch a capital campaign for it (${$(cost)})`, 'campaign', { goal: cost, label: b.name, tkind: 'plot', tid: p.id }) : ''}</div></details>`;
   };
 
   // =====================================================================
@@ -763,7 +772,14 @@
     return null;
   };
   A.ask = (s, d) => ZG.Dev.ask(s, +d.pid, d.lvl);
-  A.campaign = (s, d) => ZG.Dev.startCampaign(s, +d.goal, d.label);
+  A.campaign = (s, d) => {
+    const r = ZG.Dev.startCampaign(s, +d.goal, d.label, d.tkind ? { kind: d.tkind, id: d.tid != null && d.tid !== '' ? +d.tid : null } : undefined);
+    if (r.ok) {
+      P.ui.tab = 'fundraising';
+      P.ui.sub.fundraising = 'pipeline';
+    }
+    return r;
+  };
   A.gala = (s) => ZG.Dev.gala(s);
   A.grant = (s, d) => ZG.Dev.applyGrant(s, +d.idx);
   A.sponsorYes = (s, d) => ZG.Dev.acceptSponsor(s, +d.oid);

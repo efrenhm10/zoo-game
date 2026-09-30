@@ -119,7 +119,6 @@
     if (p.appeal && s.day >= p.appeal.day) {
       const got = Math.round(p.appeal.target * U.rf(s, 0.6, 1.3) * U.clamp(s.rep / s.rep0, 0.6, 1.3) * s.economy / 1000) * 1000;
       ZG.Econ.earn(s, 'donations', got);
-      if (s.dev.campaign) s.dev.campaign.raised += 0;
       ZG.Sim.news(s, `📬 ${d.name}'s appeal raised ${$(got)} for the zoo.`, 'good');
       p.appeal = null;
     }

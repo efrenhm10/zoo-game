@@ -114,7 +114,6 @@
     capital: 'Capital fund (repairs & new habitats)',
     conservation: 'Field conservation',
     naming: 'Name a habitat after them',
-    campaign: 'The capital campaign',
     planned: 'A gift in their will',
   };
   DN.askLevels = (d) => [
@@ -129,7 +128,10 @@
     if (purpose === 'capital' && i.kind === 'capital') o += 0.12;
     if (purpose === 'conservation' && i.kind === 'conservation') o += 0.15;
     if (purpose === 'naming') o += d.trait === 'recognition' ? 0.15 : d.trait === 'private' ? -0.3 : 0;
-    if (purpose === 'campaign') o += s.dev.campaign ? 0.05 + (s.dev.campaign.momentum || 0) * 0.1 : -1;
+    if (purpose.startsWith('camp:')) {
+      const c = ZG.Campaigns.byId(s, purpose.slice(5));
+      o += c ? 0.05 + (c.momentum || 0) * 0.1 : -1;
+    }
     if (purpose === 'planned') o += d.trait === 'legacy' ? 0.25 : -0.1;
     if (i.kind === 'species' && !s.animals.some((a) => a.sp === i.sp)) o -= 0.15;
     if (i.kind === 'welfare') o += (ZG.Animals.avgWelfare(s) - 70) / 150;
@@ -160,10 +162,11 @@
         ZG.Sim.news(s, `📜 ${d.name} added the zoo to their estate plans (about ${$(amt)} someday).`, 'good');
         return { ok: true, msg: `${d.name} will leave the zoo about ${$(amt)} in their will (odds were ${pct}%).`, won: true };
       }
-      const restricted = purpose === 'capital' || purpose === 'campaign' || purpose === 'naming';
+      const restricted = purpose === 'capital' || purpose.startsWith('camp:') || purpose === 'naming';
       ZG.Econ.earn(s, 'donations', amt, restricted);
       if (purpose === 'conservation') ZG.Econ.spend(s, 'conservation', 0);
-      if (s.dev.campaign && (purpose === 'campaign' || restricted)) s.dev.campaign.raised += amt;
+      const camp = purpose.startsWith('camp:') ? ZG.Campaigns.byId(s, purpose.slice(5)) : restricted ? ZG.Campaigns.primary(s) : null;
+      if (camp) camp.raised += amt;
       if (purpose === 'naming') {
         const h = s.habitats.filter((x) => !x.construction && !x.donorName).sort((a, b) => ZG.Habitats.appeal(s, b) - ZG.Habitats.appeal(s, a))[0];
         if (h) h.donorName = d.name.replace(/^The /, '');
@@ -177,7 +180,7 @@
       bump(d, 2);
       s.board = U.clamp(s.board + Math.min(6, (amt / ZG.zoo(s).majorGiftScale) * 2), 0, 100);
       DN.sort(s);
-      ZG.Sim.news(s, `🎁 ${d.name} said yes: ${$(amt)} for ${DN.PURPOSES[purpose].toLowerCase()}.`, 'good');
+      ZG.Sim.news(s, `🎁 ${d.name} said yes: ${$(amt)} for ${camp && purpose.startsWith('camp:') ? `the “${camp.label}” campaign` : (DN.PURPOSES[purpose] || 'the zoo').toLowerCase()}.`, 'good');
       return { ok: true, msg: `Yes! ${d.name} gave ${$(amt)} (odds were ${pct}%). Don’t forget to thank them.`, won: true };
     }
     const over = Math.max(0, amt / d.cap - 1);
