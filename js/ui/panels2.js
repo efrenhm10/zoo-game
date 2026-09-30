@@ -36,6 +36,106 @@
   insertAfter('finance', { id: 'business', icon: '🎪', name: 'Events & Shop' });
 
   // =====================================================================
+  // MOVE ANIMALS between habitats
+  // =====================================================================
+  // How well a destination habitat suits the selected animals.
+  P.moveFit = function (s, h, spId, movers) {
+    const sp = ZG.SPECIES[spId];
+    const ids = new Set(movers.map((a) => a.id));
+    const res = s.animals.filter((a) => a.hab === h.id && !ids.has(a.id));
+    const issues = [];
+    let level = 'good';
+    const worse = (l) => (level = l === 'block' || level === 'block' ? 'block' : l === 'bad' || level === 'bad' ? 'bad' : 'warn');
+    if (h.construction) return { level: 'block', issues: ['Still under construction'], room: 0 };
+    const others = [...new Set(res.map((a) => a.sp))].filter((x) => x !== spId);
+    if (others.some((x) => !(ZG.SPECIES[x].mix && ZG.SPECIES[x].mix === sp.mix))) {
+      issues.push(`Can't share with ${others.map((x) => ZG.SPECIES[x].name).join(', ')}`);
+      worse('block');
+    }
+    if (!sp.biomes.includes(h.biome)) (issues.push(`Wrong landscape (${ZG.BIOMES[h.biome].name})`), worse('bad'));
+    const used = res.reduce((t, a) => t + ZG.SPECIES[a.sp].space, 0);
+    const room = Math.max(0, Math.floor((h.area - used) / sp.space));
+    if (room < movers.length) (issues.push(room ? `Room for only ${room}` : 'No room: it would be overcrowded'), worse('bad'));
+    const Z = ZG.zoo(s);
+    if (h.climate === 'none' && (Math.max(...Z.climate.hi) > sp.climate[1] + 3 || Math.min(...Z.climate.hi) - 20 < sp.climate[0] - 3)) (issues.push('Climate is too hot or cold at times'), worse('warn'));
+    const group = res.filter((a) => a.sp === spId).concat(movers);
+    if (ZG.Animals.extraMales(s, group, spId)) (issues.push('Too many males together'), worse('warn'));
+    if (group.length > sp.group[1]) (issues.push(`Group of ${group.length} is bigger than natural (${sp.group[0]}–${sp.group[1]})`), worse('warn'));
+    if (h.renovation) issues.push('Under renovation: they stay off-exhibit until it reopens');
+    return { level, issues, room, res };
+  };
+
+  P.moveDialog = function (s) {
+    const mv = P.ui.move;
+    const sp = ZG.SPECIES[mv.sp];
+    const from = s.habitatsById[mv.from];
+    const pool = s.animals.filter((a) => a.sp === mv.sp && a.hab === mv.from);
+    const movers = pool.filter((a) => mv.sel.includes(a.id));
+    const chips = pool
+      .map((a) => `<button class="chip ${mv.sel.includes(a.id) ? 'on' : ''}" data-act="moveToggle" data-aid="${a.id}">${U.sexIcon(a.sex)} ${esc(a.name)} <small>${U.ageStr(a.age)}${a.star ? ' ⭐' : ''}${a.loc === 'quarantine' ? ' · quarantine' : ''}</small></button>`)
+      .join('');
+    const cost = movers.filter((a) => a.loc !== 'quarantine').length * 1500;
+    const rank = { good: 0, warn: 1, bad: 2, block: 3 };
+    const dests = s.habitats
+      .filter((h) => h.id !== mv.from)
+      .map((h) => ({ h, fit: P.moveFit(s, h, mv.sp, movers) }))
+      .sort((a, b) => rank[a.fit.level] - rank[b.fit.level] || b.fit.room - a.fit.room);
+    const rows = dests
+      .map(({ h, fit }) => {
+        const resTxt = fit.res && fit.res.length ? [...new Set(fit.res.map((a) => a.sp))].map((x) => `${ZG.SPECIES[x].name} ${U.sexCount(fit.res.filter((a) => a.sp === x))}`).join(' · ') : 'empty';
+        const badge = { good: '<span class="dchip ok">✅ Good fit</span>', warn: '<span class="dchip">⚠️ Workable</span>', bad: '<span class="dchip bad">⛔ Poor fit</span>', block: '<span class="dchip bad">🚫 Not possible</span>' }[fit.level];
+        const act = fit.level === 'block' || !movers.length ? '' : btn(`Move ${movers.length} here${cost ? ` (${$(cost)})` : ''}`, 'moveDo', { hab: h.id }, 'sm ' + (fit.level === 'good' ? 'primary' : ''));
+        return `<div class="moverow ${fit.level}"><div><b>${esc(h.name)}</b> ${badge}<br><small>${ZG.BIOMES[h.biome].name}${h.site ? ' · second site' : ''} · ${U.num(h.area)} m² · now: ${resTxt} · room for ${fit.room} more ${sp.name}${fit.room === 1 ? '' : 's'}</small>${fit.issues.length ? `<br><small class="${fit.level === 'good' ? 'sub' : 'warn'}">${fit.issues.map(esc).join(' · ')}</small>` : ''}</div>${act}</div>`;
+      })
+      .join('');
+    return `<div class="modal-back"><div class="modal observe movedlg"><div class="m-head"><span class="m-icon">↔️</span><div><small>From ${esc(from ? from.name : 'quarantine')}</small><h2>Move ${sp.name}s</h2></div></div>
+      <div class="m-body"><p><b>Choose who moves</b> <span class="sub">(${movers.length} selected)</span> ${btn('All', 'moveAll', { v: 1 }, 'sm')}${btn('None', 'moveAll', { v: 0 }, 'sm')}</p><div class="swatches chips">${chips}</div>
+      <p class="sub">Moving costs $1,500 per animal and stresses them for a few days. Animals still in quarantine just change destination, free.</p>
+      <h3>Where to</h3>${rows || '<p class="sub">You have no other habitats.</p>'}</div>
+      <div class="m-choices"><button class="choice" data-close="1"><b>Close</b></button></div></div></div>`;
+  };
+
+  A.moveOpen = (s, d) => {
+    const a = ZG.Animals.byId(s, +d.aid);
+    if (!a) return null;
+    P.ui.move = { sp: a.sp, from: a.hab, sel: [a.id] };
+    return { dialog: P.moveDialog(s) };
+  };
+  A.moveGroup = (s, d) => {
+    const list = s.animals.filter((a) => a.hab === +d.hab && a.sp === d.sp);
+    if (!list.length) return null;
+    P.ui.move = { sp: d.sp, from: +d.hab, sel: list.map((a) => a.id) };
+    return { dialog: P.moveDialog(s) };
+  };
+  A.moveToggle = (s, d) => {
+    const sel = P.ui.move.sel, id = +d.aid, i = sel.indexOf(id);
+    i >= 0 ? sel.splice(i, 1) : sel.push(id);
+    return { dialog: P.moveDialog(s) };
+  };
+  A.moveAll = (s, d) => {
+    const mv = P.ui.move;
+    mv.sel = +d.v ? s.animals.filter((a) => a.sp === mv.sp && a.hab === mv.from).map((a) => a.id) : [];
+    return { dialog: P.moveDialog(s) };
+  };
+  A.moveDo = (s, d) => {
+    const mv = P.ui.move;
+    const h = s.habitatsById[+d.hab];
+    const movers = s.animals.filter((a) => mv.sel.includes(a.id));
+    if (!h || !movers.length) return { ok: false, msg: 'Pick at least one animal.', dialog: P.moveDialog(s) };
+    const fit = P.moveFit(s, h, mv.sp, movers);
+    if (fit.level === 'block') return { ok: false, msg: fit.issues.join('. '), dialog: P.moveDialog(s) };
+    if (fit.level === 'bad' && !ZG.App.confirm('mv' + h.id, `${h.name} is a poor fit (${fit.issues.join(', ')}). Move anyway?`)) return { dialog: P.moveDialog(s) };
+    for (const a of movers) {
+      if (a.loc === 'quarantine') a.hab = h.id;
+      else ZG.AZA.move(s, a.id, h.id);
+    }
+    P.ui.move = null;
+    const names = movers.map((a) => a.name);
+    ZG.Sim.news(s, `↔️ Moved ${names.length > 3 ? `${names.length} ${ZG.SPECIES[mv.sp].name}s` : names.join(', ')} to ${h.name}.`, 'info');
+    return { ok: true, msg: `Moved ${names.length > 3 ? names.length + ' animals' : names.join(', ')} to ${h.name}.`, closeDialog: true };
+  };
+
+  // =====================================================================
   // CONSERVATION (SSP plans, field partners, accreditation)
   // =====================================================================
   P.tab_conservation = function (s) {
@@ -47,7 +147,7 @@
   P.sspView = function (s) {
     const spn = (id) => ZG.SPECIES[id];
     const recs = s.ssp.recs.slice().sort((a, b) => (a.status === 'open' ? -1 : 1) - (b.status === 'open' ? -1 : 1) || b.created - a.created);
-    const typeName = { breed: '💞 Breed', nobreed: '🚫 Do not breed', send: '📤 Send out', receive: '📥 Receive', hold: '🏠 Space request' };
+    const typeName = { breed: '💞 Breed', nobreed: '🚫 Do not breed', send: '📤 Send out', receive: '📥 Receive', hold: '🏠 Space request', contra: '💊 Keep on contraception', separate: '🧬 Prevent inbreeding' };
     const recHtml = recs
       .map((r) => {
         const sp = spn(r.sp);
@@ -58,9 +158,13 @@
             acts = `<select data-rechab="${r.id}">${habs.map((h) => `<option value="${h.id}" ${s.animals.some((a) => a.hab === h.id && a.sp === r.sp) ? 'selected' : ''}>${esc(h.name)}</option>`).join('')}</select>`;
             acts += habs.length ? btn(`Accept (${$(ZG.AZA.transportCost(s, r.sp))})`, 'ssp', { rid: r.id, yes: 1 }, 'sm primary') : dis('Accept', 'Build a suitable habitat first');
           } else if (r.type === 'hold') acts = btn('Commit space', 'ssp', { rid: r.id, yes: 1 }, 'sm primary') + btn('📨 Request them', 'reqForSp', { sp: r.sp }, 'sm');
+          else if (r.type === 'separate') {
+            const y = ZG.Animals.byId(s, r.aids[0]);
+            acts = btn(`🚚 Transfer ${y ? esc(y.name) : ''} to ${esc(r.partner)}`, 'ssp', { rid: r.id, yes: 1 }, 'sm primary') + (y ? btn('↔ Move to another habitat…', 'moveOpen', { aid: y.id }, 'sm') : '') + btn('💊 Keep both on contraception', 'sspBothContra', { rid: r.id }, 'sm');
+          } else if (r.type === 'contra') acts = btn('💊 Keep on contraception', 'ssp', { rid: r.id, yes: 1 }, 'sm primary');
           else acts = btn(r.type === 'nobreed' ? 'Acknowledge' : 'Accept', 'ssp', { rid: r.id, yes: 1 }, 'sm primary');
           acts += btn('Decline', 'ssp', { rid: r.id, yes: 0 }, 'sm');
-        }
+        } else if (r.type === 'separate' && r.status === 'accepted') acts = '<small class="warn">Both are on contraception for now. Separating them is still best.</small>' + btn('↔ Move…', 'moveOpen', { aid: r.aids[0] }, 'sm');
         const who = (r.aids || []).map((id) => ZG.Animals.byId(s, id)).filter(Boolean).map((a) => `${esc(a.name)} ${U.sexIcon(a.sex)}`).join(' × ');
         return `<div class="card rec ${r.status}"><div class="offer-top">${ZG.Portraits.img(r.sp, 'portrait sm')}<div><b>${typeName[r.type]}</b> · ${sp.name} <small>(${sp.iucn})</small> <span class="pill">${r.status}</span>${who ? `<br><small>${who}</small>` : ''}</div></div><p>${esc(r.text)}</p><small>${esc(r.partner)} · respond by ${U.fmtDate(r.deadline)}</small><div class="actions">${acts}</div></div>`;
       })
@@ -591,6 +695,21 @@
     P.ui.tab = 'animals';
     P.ui.scrollTo = 'req-card';
     return h ? null : { ok: false, msg: `You need a ${sp.biomes.map((b) => ZG.BIOMES[b].name).join(' or ')} habitat first.` };
+  };
+  A.sspGo = () => {
+    P.ui.tab = 'conservation';
+    P.ui.sub.conservation = 'ssp';
+    return null;
+  };
+  A.sspBothContra = (s, d) => {
+    const r = s.ssp.recs.find((x) => x.id === +d.rid);
+    if (!r) return null;
+    for (const id of r.aids) {
+      const a = ZG.Animals.byId(s, id);
+      if (a) a.contra = true;
+    }
+    r.status = 'accepted';
+    return { ok: true, msg: 'Both are on contraception. The coordinator would still prefer they live apart.' };
   };
   A.treat = (s, d) => ZG.Animals.treat(s, +d.aid, d.lvl);
 

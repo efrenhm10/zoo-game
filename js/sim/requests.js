@@ -107,6 +107,7 @@
       const age = Math.round(U.rf(s, sp.mature * 0.7, sp.mature + 6) * 365);
       const a = ZG.Animals.create(s, r.sp, sex, age, { hab: h.id, loc: 'quarantine', qDays: AZA().quarantineDays(s), gv: U.pick(s, ['High', 'Medium', 'Medium', 'Low']) });
       names.push(a.name);
+      ZG.AZA.advise(s, a, 'arrival');
     }
     if (!s.stats.speciesSeen.includes(r.sp)) {
       s.stats.speciesSeen.push(r.sp);

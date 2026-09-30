@@ -429,10 +429,15 @@
         return;
       }
       const act = t.closest('[data-act]');
-      if (act && el.panel.contains(act)) {
+      if (act && (el.panel.contains(act) || el['modal-root'].contains(act))) {
         const fn = ZG.Actions[act.dataset.act];
         if (!fn) return;
         const r = fn(s, act.dataset, act);
+        if (r && r.dialog) {
+          modalOpen = true;
+          el['modal-root'].innerHTML = r.dialog;
+        }
+        if (r && r.closeDialog) closeModal();
         if (r && r.modal) showResult(r.modal);
         else if (r && r.msg) toast(r.msg, !r.ok);
         if (act.dataset.act === 'select' && act.dataset.plot != null) ZG.Render.focusPlot(s, +act.dataset.plot);

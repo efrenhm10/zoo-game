@@ -163,7 +163,7 @@
         if (x.biome < 100) notes.push('wrong biome');
         if (x.climate < 80) notes.push(`climate stress (${Math.round(x.tempDiff)}°F outside range)`);
         if (x.social < 90) notes.push(x.n < sp.group[0] ? `group too small (ideal ${sp.group[0]}–${sp.group[1]})` : 'group too large');
-        html += `<p class="sprow">${ZG.Portraits.img(id, 'portrait xs')} <b>${sp.name}</b> ×${x.n} ${U.sexCount(animals.filter((a) => a.sp === id))} — habitat welfare <b class="${cls(x.w)}">${Math.round(x.w)}</b>${notes.length ? ` <span class="warn">(${notes.join(', ')})</span>` : ''}</p>`;
+        html += `<p class="sprow">${ZG.Portraits.img(id, 'portrait xs')} <b>${sp.name}</b> ×${x.n} ${U.sexCount(animals.filter((a) => a.sp === id))} — habitat welfare <b class="${cls(x.w)}">${Math.round(x.w)}</b>${notes.length ? ` <span class="warn">(${notes.join(', ')})</span>` : ''} ${btn('↔ Move…', 'moveGroup', { hab: h.id, sp: id }, 'sm')}</p>`;
       }
     }
     html += P.addAnimals(s, h);
@@ -268,10 +268,10 @@
       const moving = P.ui.moveFor === a.id;
       return `<div class="acard2">
         <div class="round">${ZG.Portraits.img(a.sp, 'portrait md')}<span class="banner">${esc(a.name)}</span></div>
-        <div class="ainfo">${U.sexTag(a.sex)} <small>${sp.name} · ${U.ageStr(a.age)} · GV ${a.gv} ${flags}</small>
+        <div class="ainfo">${U.sexTag(a.sex)} <small>${sp.name} · ${U.ageStr(a.age)} · GV ${a.gv} ${flags}</small>${P.sspTag(s, a)}
           <div class="mini2"><span>Welfare</span>${bar(a.welfare)}<span>Health</span>${bar(a.health)}</div>
           <div class="acts">${breedable ? btn(a.contra ? '💊 Contracepted' : '💞 Breeding', 'contra', { aid: a.id }, 'sm ' + (a.contra ? '' : 'on')) : ''}
-          ${moving ? `<select data-move="${a.id}"><option value="">Move to…</option>${habs.filter((h) => h.id !== a.hab).map((h) => `<option value="${h.id}">${esc(h.name)}</option>`).join('')}</select>` : btn('Move', 'moveOpen', { aid: a.id }, 'sm')}
+          ${btn('↔ Move', 'moveOpen', { aid: a.id }, 'sm')}
           ${sp.program !== 'Loan' ? btn('Transfer', 'sendOut', { aid: a.id }, 'sm') : ''}</div></div></div>`;
     };
     let html = `<h2>🦒 Collection (${s.animals.length} animals)</h2><p class="sub">Plus a supporting collection of birds, reptiles & invertebrates. 💊 = on contraception; 💞 = allowed to breed. Follow SSP recommendations to avoid unplanned births.</p>${P.requestCard(s)}`;
@@ -374,6 +374,20 @@
       <label>Species <select data-req="sp">${spSel || '<option>No species suit this habitat</option>'}</select></label>
       <label>Males ${num('m')}</label><label>Females ${num('f')}</label></div>
       ${est}${open ? `<h4>Your requests</h4><ul class="plain reqs">${open}</ul>` : ''}</div>`;
+  };
+
+  // The SSP's current guidance for one animal, as a small tag on its card.
+  P.sspTag = function (s, a) {
+    const r = s.ssp.recs.find((x) => (x.status === 'open' || x.status === 'accepted') && x.aids && x.aids.includes(a.id));
+    if (!r) return '';
+    const other = r.aids.map((id) => ZG.Animals.byId(s, id)).find((x) => x && x.id !== a.id);
+    const t = {
+      breed: `💞 SSP: breed with ${other ? esc(other.name) : 'mate'}`,
+      contra: '💊 SSP: keep on contraception',
+      separate: `⚠️ SSP: separate from ${other ? esc(other.name) : 'relative'} (inbreeding risk)`,
+      send: '📤 SSP: transfer out',
+    }[r.type];
+    return t ? `<div class="ssptag ${r.type}" data-act="sspGo">${t}${r.status === 'open' ? ' · respond' : ''}</div>` : '';
   };
 
   P.market = function (s) {
