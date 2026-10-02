@@ -599,7 +599,7 @@
     cat: 'animal', cooldown: 400,
     weight: (s) => {
       const bad = s.habitats.some((h) => !h.construction && h.condition < 40 && ZG.Animals.inHab(s, h.id).some((a) => SP(a.sp).danger >= 2));
-      return bad ? 1.2 : s.infra.perimeter.cond < 35 ? 0.4 : 0;
+      return (bad ? 1.2 : s.infra.perimeter.cond < 35 ? 0.4 : 0) * (1 - 0.3 * ZG.Infra.bonus(s, 'perimeter'));
     },
     prep: (s) => {
       const hs = s.habitats.filter((h) => !h.construction && ZG.Animals.inHab(s, h.id).some((a) => SP(a.sp).danger >= 2)).sort((a, b) => a.condition - b.condition);

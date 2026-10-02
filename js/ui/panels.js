@@ -166,11 +166,18 @@
         html += `<p class="sprow">${ZG.Portraits.img(id, 'portrait xs')} <b>${sp.name}</b> ×${x.n} ${U.sexCount(animals.filter((a) => a.sp === id))} — habitat welfare <b class="${cls(x.w)}">${Math.round(x.w)}</b>${notes.length ? ` <span class="warn">(${notes.join(', ')})</span>` : ''} ${btn('↔ Move…', 'moveGroup', { hab: h.id, sp: id }, 'sm')}</p>`;
       }
     }
+    if (h.savedRedesign && !h.renovation) {
+      const o = h.savedRedesign;
+      const c = ZG.Campaigns.list(s).find((x) => x.target.kind === 'hab' && x.target.id === h.id);
+      html += `<div class="card saved"><h3 style="margin-top:0">📁 Saved redesign: “${esc(o.name)}”</h3><p class="sub">${esc(o.title)} · ${ZG.BIOMES[o.biome].name} · ${o.features.map((f) => ZG.Design.FEATURES[f].icon).join(' ')}</p><p>Cost <b>${$(o.cost)}</b> · ~${Math.round(o.days / 30)} months closed</p>
+        ${c ? `<p>📣 Campaign: <b>${$(c.raised)}</b> of ${$(c.goal)}${bar(c.raised, c.goal)}${btn('Open campaign', 'campGo', {}, 'sm')}</p>` : ''}
+        <div class="actions">${btn('🛠️ Renovate to this design', 'redesignSaved', { hab: h.id }, 'primary')}${btn('Discard', 'discardRedesign', { hab: h.id }, 'sm')}</div></div>`;
+    }
     html += P.addAnimals(s, h);
     const ren = ZG.Habitats.renovateCost(s, h);
     const them = Math.round(h.area * 220 * Z.costMult);
     html += `<div class="actions">
-      ${h.renovation ? `<span>🛠️ Renovating (${Math.ceil(h.renovation.days / 30)} mo left)</span>` : btn(`Renovate (${$(ren)})`, 'renovate', { hab: h.id })}
+      ${h.renovation ? `<span>🛠️ ${h.renovation.redesign ? 'Redesign' : 'Renovation'} underway (${Math.ceil(h.renovation.days / 30)} mo left)</span>` : btn('📐 Redesign with the architect', 'architectReno', { hab: h.id }, 'primary') + btn(`Quick refurbish (${$(ren)})`, 'renovate', { hab: h.id })}
       ${h.theming < 95 && !h.renovation ? btn(`Improve theming (${$(them)})`, 'theming', { hab: h.id }) : ''}
       ${h.climate === 'none' ? btn(`Add heated building (${$(1.2e6 * Z.costMult + h.area * 250)})`, 'climate', { hab: h.id, type: 'heated' }) + btn(`Add chilled building (${$(1.2e6 * Z.costMult + h.area * 250)})`, 'climate', { hab: h.id, type: 'chilled' }) : ''}
       ${!ZG.Habitats.renameLock(s, h) && ZG.Campaigns.canStart(s) && !ZG.Campaigns.list(s).some((c) => c.target.kind === 'hab' && c.target.id === h.id) ? btn(`📣 Renovation & naming campaign (${$(Math.max(ren, h.area * 900 * Z.costMult))})`, 'campaign', { goal: Math.round(Math.max(ren, h.area * 900 * Z.costMult)), label: `Transform ${h.name}`, tkind: 'hab', tid: h.id }, 'sm') : ''}
@@ -448,12 +455,23 @@
 
   // =====================================================================
   P.tab_facilities = function (s) {
-    const rows = ZG.Infra.SYSTEMS.map((x) => {
+    const I = ZG.Infra;
+    const rows = I.SYSTEMS.map((x) => {
       const st = s.infra[x.id];
-      const c80 = ZG.Infra.repairCost(s, x.id, 80), c95 = ZG.Infra.repairCost(s, x.id, 95);
-      return `<div class="card"><div class="row"><span>${x.icon} <b>${x.name}</b></span><b class="${cls(st.cond)}">${Math.round(st.cond)}</b></div>${bar(st.cond)}
-        <small>Replacement value ${$(st.cost)}</small>
-        <div class="actions">${st.repair ? `🏗️ Repair underway — ${Math.ceil(st.repair.days / 30)} mo left` : `${st.cond < 80 ? btn(`Repair → 80 (${$(c80)})`, 'repair', { sys: x.id, to: 80 }, 'sm') : ''}${st.cond < 95 ? btn(`Rebuild → 95 (${$(c95)})`, 'repair', { sys: x.id, to: 95 }, 'sm') : ''}`}</div></div>`;
+      const lv = I.level(s, x.id);
+      const c80 = I.repairCost(s, x.id, 80), c95 = I.repairCost(s, x.id, 95);
+      const work = st.repair
+        ? `<span>${st.repair.upgrade ? '⬆️ Upgrade' : st.repair.patch ? '🩹 Patch' : '🏗️ Repair'} underway: ${st.repair.days > 30 ? Math.ceil(st.repair.days / 30) + ' mo' : st.repair.days + ' days'} left</span>`
+        : [
+            st.cond < 70 ? btn(`🩹 Patch it (${$(I.patchCost(s, x.id))})`, 'infraPatch', { sys: x.id }, 'sm') : '',
+            st.cond < 80 ? btn(`🔧 Repair → 80 (${$(c80)})`, 'repair', { sys: x.id, to: 80 }, 'sm') : '',
+            st.cond < 95 ? btn(`🏗️ Rebuild → 95 (${$(c95)})`, 'repair', { sys: x.id, to: 95 }, 'sm') : '',
+            lv < 3 ? btn(`⬆️ Upgrade to “${I.LEVELS[lv + 1]}” (${$(I.upgradeCost(s, x.id))})`, 'infraUpgrade', { sys: x.id }, 'sm primary') : '',
+          ].join('');
+      return `<div class="card infra lvl${lv}"><div class="row"><span>${x.icon} <b>${x.name}</b> <span class="lvlbadge">${'★'.repeat(lv)}${'☆'.repeat(3 - lv)} ${I.LEVELS[lv]}</span></span><b class="${cls(st.cond)}">${Math.round(st.cond)}</b></div>${bar(st.cond)}
+        <small>Replacement value ${$(st.cost)}${st.patchedUntil > s.day ? ' · <b class="warn">🩹 patched: wearing out fast</b>' : ''}${lv > 1 ? ` · ${esc(I.BENEFITS[x.id])}` : ''}</small>
+        ${lv < 3 && !st.repair ? `<p class="sub">⬆️ Upgrade: ${esc(I.BENEFITS[x.id])} Restores condition to 100 and slows wear.</p>` : ''}
+        <div class="actions">${work}</div></div>`;
     }).join('');
     const eff = ZG.Infra.maintEffect(s);
     return `<h2>🔧 Infrastructure & Deferred Maintenance</h2>

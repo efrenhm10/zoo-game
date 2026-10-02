@@ -232,9 +232,22 @@
   const FLOURISH = ['waterfall', 'skywalk', 'underwaterView', 'amphitheater', 'feedingDeck', 'stream', 'lush', 'ruins', 'mist'];
 
   // Build the three concept options from a brief
-  D.concepts = function (s, plotId, text) {
+  D.concepts = function (s, plotId, text, opts) {
+    opts = opts || {};
     const plot = s.plots[plotId];
     const parsed = D.parse(s, plot, text);
+    const reno = opts.renovate ? s.habitatsById[opts.renovate] : null;
+    if (reno) {
+      // Redesigning an existing habitat: keep the current residents unless the brief names others.
+      const residents = [...new Set(s.animals.filter((a) => a.hab === reno.id).map((a) => a.sp))];
+      if (!parsed.species.length && residents.length) {
+        parsed.species = residents.slice(0, 4);
+        parsed.heard.unshift(`keep the ${residents.map((id) => ZG.SPECIES[id].name.toLowerCase() + 's').join(' and ')}`);
+      }
+      if (!BIOME_WORDS[parsed.biome] || !Object.keys(BIOME_WORDS).some((b) => BIOME_WORDS[b].some((w) => (' ' + (text || '').toLowerCase() + ' ').includes(w)))) {
+        if (!parsed.species.length || parsed.species.every((id) => ZG.SPECIES[id].biomes.includes(reno.biome))) parsed.biome = reno.biome;
+      }
+    }
     const r = (() => {
       let t = (text || '').length * 7919 + plotId * 104729 + s.day;
       return () => {
@@ -295,7 +308,7 @@
         upkeep: D.upkeep({ features }), capacity: cap, warnings, pitch, seed: Math.floor(r() * 1e9), plot: plotId, brief: text,
       };
     };
-    return {
+    const out = {
       parsed,
       options: [
         mk('A', 'Your Vision', tierA, climateA, featA, 'Exactly what you described.', featA[0]),
@@ -303,6 +316,24 @@
         mk('C', 'Signature Landmark', tierC, climateA, [...new Set(featC)], 'Our boldest idea — a destination exhibit people travel to see.', flourish),
       ],
     };
+    if (reno) {
+      // A redesign reuses utilities and paths, but the old exhibit has to come out first.
+      const demo = Math.round(reno.area * 60 * ZG.zoo(s).costMult);
+      for (const o of out.options) {
+        o.cost = Math.round((o.cost * 0.8 + demo) / 1000) * 1000;
+        o.days = Math.round(o.days * 0.8);
+        o.renovate = reno.id;
+        const n = s.animals.filter((a) => a.hab === reno.id);
+        for (const id of [...new Set(n.map((a) => a.sp))]) {
+          const cap = Math.floor(reno.area / ZG.SPECIES[id].space);
+          const have = n.filter((a) => a.sp === id).length;
+          if (have > cap) o.warnings.push(`${have} ${ZG.SPECIES[id].name}s live here but the redesign fits ${cap}.`);
+          if (!ZG.SPECIES[id].biomes.includes(o.biome)) o.warnings.push(`The ${ZG.SPECIES[id].name}s living here need ${ZG.SPECIES[id].biomes.map((b) => ZG.BIOMES[b].name).join(' or ')}; move them before it reopens.`);
+        }
+        if (!out.parsed.name) o.name = reno.name;
+      }
+    }
+    return out;
   };
 
   D.fee = (s) => Math.round(18000 * Math.sqrt(ZG.zoo(s).infraScale) * ZG.zoo(s).costMult / 1000) * 1000;

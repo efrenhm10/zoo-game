@@ -90,15 +90,15 @@
     exp.salaries = ZG.Staff.annualCost(s);
     let food = Z.supporting.cost;
     for (const a of s.animals) food += ZG.SPECIES[a.sp].food * (a.age < 365 ? 0.4 : 1);
-    exp.animalcare = food * (s.flags.foodMult || 1);
+    exp.animalcare = food * (s.flags.foodMult || 1) * (1 - 0.04 * ZG.Infra.bonus(s, 'commissary'));
     let upkeep = 0;
     for (const h of s.habitats) if (!h.construction) upkeep += ZG.Design.upkeep(h);
-    exp.utilities = Z.utilities * 1.08 + Math.min(0, upkeep) + s.habitats.filter((h) => h.climate !== 'none' && !h.construction).length * 60000 * (Z.utilities > 4e6 ? 1.6 : 1);
+    exp.utilities = Z.utilities * 1.08 * (1 - 0.04 * ZG.Infra.bonus(s, 'water') - 0.06 * ZG.Infra.bonus(s, 'power')) + Math.min(0, upkeep) + s.habitats.filter((h) => h.climate !== 'none' && !h.construction).length * 60000 * (Z.utilities > 4e6 ? 1.6 : 1);
     exp.maintenance = p.maintenance + Math.max(0, upkeep);
     exp.enrichment = p.enrichment;
     exp.marketing = p.marketing;
     exp.conservation = p.conservation + (s.animals.some((a) => a.sp === 'giant_panda') ? (s.flags.pandaFee || 1e6) : 0);
-    exp.overhead = Z.overhead * (s.flags.insuranceMult || 1) * ZG.mod(s, 'finance');
+    exp.overhead = Z.overhead * (s.flags.insuranceMult || 1) * ZG.mod(s, 'finance') * (1 - 0.02 * ZG.Infra.bonus(s, 'admin'));
     exp.cogs = foodRev * Z.cogs + retail * Z.cogs * mm.cogs;
     if (s.cash < 0) exp.interest = -s.cash * 0.085;
     // Irregular costs (vet bills, emergencies, transport, events, admin): average of recent months.
@@ -189,7 +189,7 @@
     const crowd = guests > cap ? Math.min(40, ((guests - cap) / cap) * 60) : 0;
     const wadj = { rain: -8, storm: -18, heat: -12, snow: -6, smoke: -15 }[s.today.weather] || 0;
     const welfare = ZG.Animals.avgWelfare(s);
-    const shop = s.merch ? ZG.Merch.PRICES[s.merch.price].sat : 0;
+    const shop = (s.merch ? ZG.Merch.PRICES[s.merch.price].sat : 0) + 2.5 * ZG.Infra.bonus(s, 'visitor');
     return U.clamp(0.25 * exhibits + 0.15 * amenities + 0.15 * service + 0.15 * value + 0.15 * welfare + 0.15 * (100 - crowd) + wadj + shop + ZG.mod(s, 'guest'), 0, 100);
   };
 
@@ -229,8 +229,8 @@
     E.spend(s, 'salaries', ZG.Staff.annualCost(s) / 365);
     let food = Z.supporting.cost;
     for (const a of s.animals) food += ZG.SPECIES[a.sp].food * (a.age < 365 ? 0.4 : 1);
-    E.spend(s, 'animalcare', (food * (s.flags.foodMult || 1)) / 365);
-    let util = (Z.utilities / 365) * (1 + Math.abs(s.today.temp - 68) * 0.006);
+    E.spend(s, 'animalcare', (food * (s.flags.foodMult || 1) * (1 - 0.04 * ZG.Infra.bonus(s, 'commissary'))) / 365);
+    let util = (Z.utilities / 365) * (1 + Math.abs(s.today.temp - 68) * 0.006) * (1 - 0.04 * ZG.Infra.bonus(s, 'water') - 0.06 * ZG.Infra.bonus(s, 'power'));
     for (const h of s.habitats) {
       if (h.climate === 'none' || h.construction) continue;
       let need = 0;
@@ -256,7 +256,7 @@
     E.spend(s, 'enrichment', p.enrichment / 365);
     E.spend(s, 'marketing', p.marketing / 365);
     E.spend(s, 'conservation', p.conservation / 365);
-    E.spend(s, 'overhead', (Z.overhead * (s.flags.insuranceMult || 1) * ZG.mod(s, 'finance')) / 365);
+    E.spend(s, 'overhead', (Z.overhead * (s.flags.insuranceMult || 1) * ZG.mod(s, 'finance') * (1 - 0.02 * ZG.Infra.bonus(s, 'admin'))) / 365);
     if (s.cash < 0) {
       E.spend(s, 'interest', (-s.cash * 0.085) / 365);
       s.stats.everBorrowed = true;

@@ -129,7 +129,8 @@
       // Core welfare, then multiplicative penalties for wrong biome/climate/mixing.
       let w = 0.15 * space + 0.1 * social + 0.45 * complexity + 0.3 * care - 3;
       w *= (biome === 100 ? 1 : 0.82) * (0.55 + 0.45 * climate / 100) * (mixOk ? 1 : 0.75);
-      w = Math.min(100, w + ZG.Design.welfareBonus(h, id));
+      const lifeSupport = h.climate !== 'none' || h.biome === 'aquatic' || h.biome === 'arctic' || (h.features || []).includes('bigPool') ? 2 * ZG.Infra.bonus(s, 'life') : 0;
+      w = Math.min(100, w + ZG.Design.welfareBonus(h, id) + lifeSupport);
       per[id] = { n, biome, climate, social, w, tempDiff: diff, extraMales: extra };
       void cond;
     }
@@ -159,7 +160,7 @@
   A.daily = function (s, t) {
     A.updateWelfare(s);
     const vr = ZG.Staff.ratio(s, 'vets');
-    const vetF = U.clamp(vr * ZG.mod(s, 'vet'), 0.3, 1.3);
+    const vetF = U.clamp(vr * ZG.mod(s, 'vet') * (1 + 0.1 * ZG.Infra.bonus(s, 'hospital')), 0.3, 1.4);
     const dead = [];
     for (const a of s.animals) {
       const sp = ZG.SPECIES[a.sp];

@@ -15,19 +15,21 @@
     ['🥬', 'a guest feeding deck'], ['🕳️', 'a cave den for privacy'], ['🌳', 'lush, immersive planting'], ['🎭', 'a keeper-talk amphitheater'],
     ['☀️', 'solar power and recycled water'], ['💲', 'keep it affordable'], ['✨', 'make it world-class'],
   ];
-  const st = { s: null, plot: null, brief: '', concepts: null, images: {} };
+  const st = { s: null, plot: null, brief: '', concepts: null, images: {}, reno: null };
 
-  A.open = function (s, plotId, brief) {
+  A.open = function (s, plotId, brief, renovateHab) {
     st.s = s;
+    st.brief = brief != null ? brief : st.plot === plotId && st.reno === (renovateHab || null) ? st.brief : '';
     st.plot = plotId;
-    st.brief = brief != null ? brief : st.plot === plotId ? st.brief : '';
+    st.reno = renovateHab || null;
     st.concepts = null;
     renderBrief();
   };
 
   function header(sub) {
     const p = st.s.plots[st.plot];
-    return `<div class="m-head arch-head"><span class="m-icon">📐</span><div><small>${U.fmtDate(st.s.day)} · ${esc(ARCH.firm)}</small><h2>Design meeting — ${U.num(p.area)} m² lot</h2>${sub ? `<small>${sub}</small>` : ''}</div></div>`;
+    const h = st.reno ? st.s.habitatsById[st.reno] : null;
+    return `<div class="m-head arch-head"><span class="m-icon">📐</span><div><small>${U.fmtDate(st.s.day)} · ${esc(ARCH.firm)}</small><h2>${h ? `Redesign meeting — ${esc(h.name)}` : `Design meeting — ${U.num(p.area)} m² lot`}</h2>${sub ? `<small>${sub}</small>` : ''}</div></div>`;
   }
   function archSays(text) {
     return `<div class="arch-says"><div class="round">${`<img class="portrait md" src="${ZG.Portraits.avatar(ARCH.look)}" alt="">`}<span class="banner">${ARCH.name.split(' ')[0]}</span></div><div class="speech">${text}</div></div>`;
@@ -39,7 +41,7 @@
     const p = s.plots[st.plot];
     const html = `<div class="modal-back"><div class="modal architect">${header()}
       <div class="m-body">
-        ${archSays(`Welcome! I’m <b>${ARCH.name}</b>, principal at ${esc(ARCH.firm)}. This lot is about <b>${U.num(p.area)} m²</b>. Tell me what you’re dreaming of — which animals, what landscape, how guests should experience it, any must-have features, and how big the budget is. I’ll come back with <b>three concepts and renderings</b>.`)}
+        ${st.reno ? archSays(renoIntro(s)) : archSays(`Welcome! I’m <b>${ARCH.name}</b>, principal at ${esc(ARCH.firm)}. This lot is about <b>${U.num(p.area)} m²</b>. Tell me what you’re dreaming of — which animals, what landscape, how guests should experience it, any must-have features, and how big the budget is. I’ll come back with <b>three concepts and renderings</b>.`)}
         <textarea id="arch-brief" rows="5" placeholder="e.g. A misty Sumatran rainforest for tigers with a waterfall, a pool they can swim in, and an underwater viewing window. Lots of plants, a keeper-talk amphitheater, and keep it affordable. Call it Tiger Falls.">${esc(st.brief)}</textarea>
         <div class="chips">${CHIPS.map(([i, t]) => `<button class="chip" data-arch-chip="${esc(t)}">${i} ${esc(t)}</button>`).join('')}</div>
         <p class="sub">Design retainer: <b>${U.money(fee)}</b> per meeting · Available for construction: capital ${U.money(s.capital)} + cash ${U.money(s.cash)} + credit ${U.money(ZG.Econ.creditLimit(s))}</p>
@@ -52,6 +54,14 @@
       ta.focus();
       ta.oninput = () => (st.brief = ta.value);
     }
+  }
+
+  function renoIntro(s) {
+    const h = s.habitatsById[st.reno];
+    const an = s.animals.filter((a) => a.hab === h.id);
+    const sps = [...new Set(an.map((a) => a.sp))].map((id) => `${an.filter((a) => a.sp === id).length} ${ZG.SPECIES[id].name}${an.filter((a) => a.sp === id).length > 1 ? 's' : ''}`);
+    const feats = (h.features || []).map((f) => ZG.Design.FEATURES[f].name.toLowerCase());
+    return `Let’s reimagine <b>${esc(h.name)}</b>. It’s <b>${U.num(h.area)} m²</b> of ${ZG.BIOMES[h.biome].name.toLowerCase()}, condition ${Math.round(h.condition)}/100${feats.length ? `, with ${feats.join(', ')}` : ''}. ${sps.length ? `Right now it holds ${sps.join(' and ')}. I’ll design around them unless you tell me otherwise.` : 'It’s empty right now, so tell me who should live here.'} What should change? A redesign reuses the utilities and paths, but we’ll demolish the old exhibit, so the animals go into off-exhibit holding while we build.`;
   }
 
   function renderConcepts() {
@@ -80,7 +90,7 @@
           </table>
           ${o.warnings.map((w) => `<p class="warnbox">⚠️ ${esc(w)}</p>`).join('')}
           <div class="actions">
-            <button class="btn primary" data-arch="build" data-key="${o.key}" ${afford ? '' : 'disabled title="Not enough capital, cash and credit"'}>🏗️ Build this design</button>
+            <button class="btn primary" data-arch="build" data-key="${o.key}" ${afford ? '' : 'disabled title="Not enough capital, cash and credit"'}>${st.reno ? '🛠️ Renovate to this design' : '🏗️ Build this design'}</button>
             <button class="btn" data-arch="save" data-key="${o.key}">📁 Save & fundraise</button>
           </div>
         </div></div>`;
@@ -105,7 +115,7 @@
     }
     const fee = ZG.Design.fee(s);
     ZG.Econ.spend(s, 'admin', fee);
-    st.concepts = ZG.Design.concepts(s, st.plot, st.brief);
+    st.concepts = ZG.Design.concepts(s, st.plot, st.brief, { renovate: st.reno });
     st.images = {};
     renderConcepts();
     // Render the three concepts one at a time so the UI stays responsive
@@ -131,6 +141,29 @@
     const s = st.s;
     const o = st.concepts.options.find((x) => x.key === key);
     if (!o) return;
+    if (save && st.reno) {
+      const h = s.habitatsById[st.reno];
+      h.savedRedesign = o;
+      let msg = `Saved the “${o.name}” redesign. Renovate whenever the money is there.`;
+      if (ZG.Campaigns.canStart(s) && !ZG.Campaigns.list(s).some((c) => c.target.kind === 'hab' && c.target.id === h.id) && !ZG.Habitats.renameLock(s, h)) {
+        const r = ZG.Dev.startCampaign(s, o.cost, `Transform ${h.name}`, { kind: 'hab', id: h.id });
+        if (r.ok) msg += ' A capital campaign has been launched for it, with naming rights on offer.';
+      }
+      ZG.App.hideModal();
+      ZG.App.toast(msg);
+      ZG.App.refresh();
+      return;
+    }
+    if (!save && st.reno) {
+      const r = ZG.Habitats.redesign(s, st.reno, o);
+      ZG.App.toast(r.msg, !r.ok);
+      if (r.ok) {
+        ZG.Sim.news(s, `📐 ${ARCH.name}’s “${o.name}” redesign (${o.title}) was approved.`, 'good');
+        ZG.App.hideModal();
+        ZG.App.refresh();
+      }
+      return;
+    }
     if (save) {
       s.plots[st.plot].savedDesign = o;
       let msg = `Saved “${o.name}”. You can build it from the lot whenever the money is there.`;

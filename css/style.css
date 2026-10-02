@@ -434,3 +434,6 @@ th.sitehead small { color: var(--muted); font-weight: 600; }
 .deal.fit { background: #f4faef; }
 .deal .actions { margin: 0; flex-wrap: nowrap; }
 .deal select { max-width: 140px; }
+.lvlbadge { font-size: 0.72rem; font-weight: 800; color: var(--accent); margin-left: 4px; white-space: nowrap; }
+.card.infra.lvl2 { border-color: #c9d8a8; }
+.card.infra.lvl3 { border-color: var(--good); background: #f4faef; }

@@ -15,6 +15,21 @@
   ];
   I.sys = (id) => I.SYSTEMS.find((x) => x.id === id);
 
+  // Upgrade levels: 1 = original, 2 = upgraded, 3 = state of the art.
+  I.LEVELS = ['', 'Original', 'Upgraded', 'State of the art'];
+  I.BENEFITS = {
+    water: 'Low-flow fixtures and leak detection cut utility bills 4% per level.',
+    power: 'Efficient lighting, solar and battery backup cut utility bills 6% per level.',
+    life: 'Better filtration and climate control: +2 welfare per level for animals in pools and heated or chilled buildings.',
+    visitor: 'Shaded paths, more restrooms and seating: guest satisfaction +2.5 per level.',
+    hospital: 'New imaging and surgical suites: vet care 10% more effective per level.',
+    commissary: 'Bulk cold storage and on-site food prep: animal food costs −4% per level.',
+    perimeter: 'Cameras and stronger barriers: escapes 30% less likely per level.',
+    admin: 'Modern offices and classrooms: overhead −2% and education grant odds +10% per level.',
+  };
+  I.level = (s, id) => (s.infra[id] && s.infra[id].level) || 1;
+  I.bonus = (s, id) => I.level(s, id) - 1;
+
   I.init = function (s) {
     const Z = ZG.zoo(s);
     s.infra = {};
@@ -68,6 +83,32 @@
     return { ok: true, msg: `Repair funded: ${U.money(cost)}.` };
   };
 
+  // A quick patch: cheap and fast, but it doesn't last.
+  I.patchCost = (s, id) => Math.round(I.repairCost(s, id, Math.min(70, s.infra[id].cond + 15)) * 0.35);
+  I.patch = function (s, id) {
+    const x = s.infra[id];
+    if (x.repair) return { ok: false, msg: 'Work is already underway.' };
+    if (x.cond >= 70) return { ok: false, msg: 'It’s in decent shape. A patch won’t help much.' };
+    const cost = I.patchCost(s, id);
+    if (!ZG.Econ.canAfford(s, cost)) return { ok: false, msg: 'Not enough cash.' };
+    ZG.Econ.spend(s, 'maintenance', cost);
+    x.repair = { target: Math.min(70, x.cond + 15), days: 10, total: 10, patch: true };
+    return { ok: true, msg: `🩹 Crews are patching the ${I.sys(id).name.toLowerCase()} (${U.money(cost)}). It will wear out faster than a proper repair.` };
+  };
+  I.upgradeCost = (s, id) => Math.round(s.infra[id].cost * 0.55 * I.level(s, id) * ZG.mod(s, 'construction'));
+  I.upgrade = function (s, id) {
+    const x = s.infra[id];
+    if (x.repair) return { ok: false, msg: 'Work is already underway.' };
+    if (I.level(s, id) >= 3) return { ok: false, msg: 'Already state of the art.' };
+    const cost = I.upgradeCost(s, id);
+    if (!ZG.Econ.canAfford(s, cost, true)) return { ok: false, msg: 'Not enough capital funds or cash (including your credit line).' };
+    ZG.Econ.spendCapital(s, 'capitalRepairs', cost);
+    const days = Math.round((150 + 90 * I.level(s, id)) * (['city', 'federal'].includes(s.gov.type) ? 1.2 : 1));
+    x.repair = { target: 100, days, total: days, upgrade: true };
+    ZG.Sim.news(s, `⬆️ Upgrade started: ${I.sys(id).name} to “${I.LEVELS[I.level(s, id) + 1]}” (${U.money(cost)}, ~${Math.round(days / 30)} months).`, 'info');
+    return { ok: true, msg: `Upgrade funded: ${U.money(cost)}. ${I.BENEFITS[id]}` };
+  };
+
   I.daily = function (s, t) {
     const eff = I.maintEffect(s);
     for (const x of I.SYSTEMS) {
@@ -75,14 +116,28 @@
       if (st.repair) {
         st.repair.days--;
         if (st.repair.days <= 0) {
-          st.cond = st.repair.target;
+          const r = st.repair;
+          st.cond = r.target;
           st.repair = null;
-          ZG.Sim.news(s, `✅ ${x.name} repair complete — condition now ${Math.round(st.cond)}.`, 'good');
-          s.gov.relationship = U.clamp(s.gov.relationship + 1, 0, 100);
+          if (r.patch) {
+            st.patchedUntil = s.day + 365;
+            ZG.Sim.news(s, `🩹 ${x.name} patched. Condition ${Math.round(st.cond)}, for now.`, 'info');
+          } else if (r.upgrade) {
+            st.level = I.level(s, x.id) + 1;
+            st.cost = Math.round(st.cost * 1.15);
+            st.patchedUntil = 0;
+            ZG.Sim.news(s, `⬆️ ${x.name} upgrade complete: now “${I.LEVELS[st.level]}”. ${I.BENEFITS[x.id]}`, 'good');
+            s.gov.relationship = U.clamp(s.gov.relationship + 1, 0, 100);
+          } else {
+            st.patchedUntil = 0;
+            ZG.Sim.news(s, `✅ ${x.name} repair complete — condition now ${Math.round(st.cond)}.`, 'good');
+            s.gov.relationship = U.clamp(s.gov.relationship + 1, 0, 100);
+          }
         }
         continue;
       }
-      const decay = x.decay * (1.8 - eff) / 365 * (st.cond > 80 ? 0.8 : 1);
+      // Patches wear out fast; upgraded systems age more slowly.
+      const decay = x.decay * (1.8 - eff) / 365 * (st.cond > 80 ? 0.8 : 1) * (st.patchedUntil > s.day ? 1.7 : 1) * (1 - 0.2 * I.bonus(s, x.id));
       st.cond = Math.max(0, st.cond - decay);
       if (st.cond < 50 && s.day - st.lastFail > 120) {
         const pYear = Math.pow((50 - st.cond) / 50, 1.4) * 1.2;

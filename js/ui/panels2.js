@@ -790,6 +790,23 @@
     const sel = document.querySelector(`[data-corphab="${d.id}"]`);
     return ZG.Corps.ask(s, +d.id, d.deal, sel ? +sel.value : null);
   };
+  A.architectReno = (s, d) => {
+    const h = s.habitatsById[+d.hab];
+    if (!h) return null;
+    ZG.Architect.open(s, h.plot, null, h.id);
+    return null;
+  };
+  A.redesignSaved = (s, d) => {
+    const h = s.habitatsById[+d.hab];
+    return h && h.savedRedesign ? ZG.Habitats.redesign(s, h.id, h.savedRedesign) : null;
+  };
+  A.discardRedesign = (s, d) => {
+    const h = s.habitatsById[+d.hab];
+    if (h) h.savedRedesign = null;
+    return { ok: true, msg: 'Redesign discarded.' };
+  };
+  A.infraPatch = (s, d) => ZG.Infra.patch(s, d.sys);
+  A.infraUpgrade = (s, d) => ZG.Infra.upgrade(s, d.sys);
   A.treat = (s, d) => ZG.Animals.treat(s, +d.aid, d.lvl);
 
   // Habitat fixes

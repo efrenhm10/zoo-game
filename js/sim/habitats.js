@@ -143,6 +143,18 @@
     return { ok: true, msg: `Expansion started. ${h.name} gets 30% more space in about ${Math.round(days / 30)} months.` };
   };
 
+  // Rebuild an existing habitat to an architect's redesign. Animals stay in off-exhibit holding.
+  H.redesign = function (s, hid, o) {
+    const h = s.habitatsById[hid];
+    if (!h || h.construction || h.renovation) return { ok: false, msg: 'This habitat is already closed for work.' };
+    if (!ZG.Econ.canAfford(s, o.cost, true)) return { ok: false, msg: `You need ${U.money(o.cost)} in capital funds + cash (incl. credit line).` };
+    ZG.Econ.spendCapital(s, 'construction', o.cost);
+    h.renovation = { days: o.days, total: o.days, redesign: { biome: o.biome, tier: o.tier, climate: o.climate, features: o.features.slice(), name: o.name !== h.name ? o.name : null, brief: o.brief } };
+    h.savedRedesign = null;
+    ZG.Sim.news(s, `🛠️ ${h.name} closed for a full redesign (${U.money(o.cost)}, ~${Math.round(o.days / 30)} months). The animals are in off-exhibit holding.`, 'info');
+    return { ok: true, msg: `Redesign underway. ${h.name} reopens in about ${Math.round(o.days / 30)} months.` };
+  };
+
   // Rename a habitat, unless a sponsor or donor holds its naming rights.
   H.renameLock = function (s, h) {
     if (h.sponsor) return `${h.sponsor} holds the naming rights under its sponsorship.`;
@@ -255,6 +267,15 @@
         h.renovation.days--;
         if (h.renovation.days <= 0) {
           if (h.renovation.biome) h.biome = h.renovation.biome;
+          const rd = h.renovation.redesign;
+          if (rd) {
+            Object.assign(h, { biome: rd.biome, tier: rd.tier, climate: rd.climate, features: rd.features.slice(), brief: rd.brief || h.brief });
+            h.theming = Math.min(100, H.TIERS[rd.tier].theming + rd.features.length * 3);
+            if (rd.name && !H.renameLock(s, h)) h.name = rd.name;
+            ZG.fx(s, 'open', h.id);
+            s.novelty = Math.min(0.8, s.novelty + 0.08);
+            s.rep = U.clamp(s.rep + 1, 0, 100);
+          }
           h.renovation = null;
           h.condition = 95;
           s.novelty = Math.min(0.8, s.novelty + 0.05);
