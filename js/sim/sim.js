@@ -113,6 +113,7 @@
     ZG.Reserve.init(s);
     ZG.Field.init(s);
     ZG.Campaigns.init(s);
+    ZG.Corps.init(s);
     // Older saves only counted SSP-recommended births; credit healthy SSP births already on the grounds.
     if (!s.stats.birthsV2) {
       s.stats.birthsV2 = true;
@@ -199,6 +200,7 @@
     ZG.Growth.monthly(s, t);
     ZG.Reserve.monthly(s, t);
     ZG.Field.monthly(s, t);
+    ZG.Corps.monthly(s, t);
     ZG.AZA.monthly(s, t);
     ZG.AZA.refreshMarket(s);
     if (t.m === 1 && s.day > 60) ZG.AZA.generatePlan(s);

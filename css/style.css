@@ -429,3 +429,8 @@ th.sitehead small { color: var(--muted); font-weight: 600; }
 .card.campaign h4 { margin: 10px 0 4px; font-size: 0.8rem; text-transform: uppercase; color: var(--olive2); }
 .lead { border-top: 1px dashed var(--line); padding: 7px 0; }
 .lead.done { opacity: 0.75; }
+.card.corp.risky { border-color: var(--pink2); }
+.deal { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px dashed var(--line); font-size: 0.84rem; }
+.deal.fit { background: #f4faef; }
+.deal .actions { margin: 0; flex-wrap: nowrap; }
+.deal select { max-width: 140px; }

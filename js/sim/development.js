@@ -29,14 +29,20 @@
     return 'wants to build something lasting';
   };
 
+  D.askOdds = function (s, p, level) {
+    const mult = { low: 0.5, mid: 1, high: 1.6 }[level];
+    let odds = U.clamp((p.ready / 100) * 1.05 - (mult - 0.5) * 0.35 + (s.rep - 60) / 250 + (ZG.mod(s, 'fundraising') - 1) * 0.6, 0.03, 0.95);
+    if (p.passion.kind === 'species' && !s.animals.some((a) => a.sp === p.passion.sp)) odds *= 0.5;
+    if (p.passion.kind === 'conservation') odds += (s.policy.conservation / ZG.zoo(s).refs.conservation - 1) * 0.2;
+    return U.clamp(odds, 0.02, 0.95);
+  };
+
   D.ask = function (s, pid, level) {
     const p = s.dev.prospects.find((x) => x.id === pid);
     if (!p) return { ok: false, msg: 'Gone.' };
     const mult = { low: 0.5, mid: 1, high: 1.6 }[level];
     const amt = Math.round(p.cap * mult / 1000) * 1000;
-    let odds = U.clamp((p.ready / 100) * 1.05 - (mult - 0.5) * 0.35 + (s.rep - 60) / 250 + (ZG.mod(s, 'fundraising') - 1) * 0.6, 0.03, 0.95);
-    if (p.passion.kind === 'species' && !s.animals.some((a) => a.sp === p.passion.sp)) odds *= 0.5;
-    if (p.passion.kind === 'conservation') odds += (s.policy.conservation / ZG.zoo(s).refs.conservation - 1) * 0.2;
+    const odds = D.askOdds(s, p, level);
     s.dev.prospects.splice(s.dev.prospects.indexOf(p), 1);
     if (U.rand(s) < odds) {
       const camp = ZG.Campaigns.primary(s);
@@ -106,6 +112,8 @@
     if (o.kind === 'exhibit') return `Naming rights: "${o.name} ${s.habitatsById[o.hab] ? s.habitatsById[o.hab].name : 'Exhibit'}"`;
     if (o.kind === 'presenting') return 'Presenting sponsor of the zoo\'s seasonal events';
     if (o.kind === 'pouring') return 'Exclusive pouring/vendor rights (boosts concessions)';
+    if (o.program === 'program') return 'Education & conservation program sponsor';
+    if (o.program === 'employees') return 'Employee giving & volunteer partnership';
     return 'General corporate partnership';
   };
   D.acceptSponsor = function (s, oid) {

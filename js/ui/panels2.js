@@ -322,11 +322,12 @@
   P.tab_fundraising = function (s) {
     const Z = ZG.zoo(s);
     const pd = ZG.Partner.def(s);
-    const st = subtabs('fundraising', [['donors', '💎 Top donors'], ['partner', `🤝 ${pd.kind === 'society' ? pd.name.replace(/ \(.*\)/, '') : 'Endowment'}`], ['pipeline', '📣 Campaigns'], ['grants', '📑 Grants & sponsors']]);
+    const st = subtabs('fundraising', [['donors', '💎 Top donors'], ['partner', `🤝 ${pd.kind === 'society' ? pd.name.replace(/ \(.*\)/, '') : 'Endowment'}`], ['prospects', '🌱 Prospects'], ['pipeline', '📣 Campaigns'], ['grants', '📑 Grants & sponsors']]);
     let body = '';
     if (st.cur === 'donors') body = P.donorsView(s);
     else if (st.cur === 'partner') body = P.partnerView(s);
     else if (st.cur === 'pipeline') body = P.pipelineView(s);
+    else if (st.cur === 'prospects') body = P.prospectsView(s);
     else body = P.grantsView(s);
     return `<h2>🤝 Fundraising & Partnerships</h2><p class="sub">${esc(Z.partner)} supports the zoo. General annual-fund giving arrives monthly. Your top donors and partner give in proportion to how well you treat them.</p>${st.html}${body}`;
   };
@@ -389,10 +390,6 @@
 
   P.pipelineView = function (s) {
     const D = ZG.Dev;
-    const pros = s.dev.prospects
-      .map((p) => `<div class="card"><div class="row"><b>${esc(p.name)}</b><span>capacity ~${$(p.cap)}</span></div><small>${D.passionText(p.passion)} · readiness</small>${bar(p.ready)}
-        <div class="actions">${btn(p.cultivating ? '☕ Cultivating ($1.5K/mo)' : 'Start cultivating', 'cultivate', { pid: p.id }, 'sm ' + (p.cultivating ? 'on' : ''))}${btn(`Ask ${$(p.cap * 0.5)}`, 'ask', { pid: p.id, lvl: 'low' }, 'sm')}${btn(`Ask ${$(p.cap)}`, 'ask', { pid: p.id, lvl: 'mid' }, 'sm')}${btn(`Ask ${$(p.cap * 1.6)}`, 'ask', { pid: p.id, lvl: 'high' }, 'sm')}</div></div>`)
-      .join('');
     const C = ZG.Campaigns;
     const kindName = { plot: '🏞️ New habitat', hab: '🛠️ Habitat transformation', land: '🗺️ Land purchase', second: '🏞️ Second site', backlog: '🔧 Repairs', general: '📣 General' };
     const camp = C.list(s)
@@ -426,7 +423,49 @@
     const galaReady = s.day - s.dev.lastGala >= 300;
     return `<h3>Capital campaigns (${n}/${C.MAX})</h3>${camp || '<p class="sub">No campaigns running.</p>'}${starters}
       <h3>Annual gala</h3><p>${galaReady ? btn(`🥂 Host the annual gala (${$(ZG.zoo(s).donorBase * 0.06)})`, 'gala') : `Next gala available ${U.fmtDate(s.dev.lastGala + 300)}`}</p>
-      <h3>New major-gift prospects</h3><p class="sub">People who give become part of your donor roster.</p>${pros || '<p>No prospects right now. More development staff finds more.</p>'}`;
+      <p class="sub">Looking for individual donors and corporate partners? See 🌱 Prospects.</p>`;
+  };
+
+  P.prospectsView = function (s) {
+    const D = ZG.Dev, CP = ZG.Corps;
+    const people = s.dev.prospects
+      .map((p) => {
+        const meet = s.day - (p.lastMeet || -999) >= 21;
+        const lv = (l, m) => btn(`Ask ${$(p.cap * m)} <small>${Math.round(D.askOdds(s, p, l) * 100)}%</small>`, 'ask', { pid: p.id, lvl: l }, 'sm' + (l === 'mid' ? ' primary' : ''));
+        return `<div class="card"><div class="donor-top">${face(p.name, hueOf(p.name))}<div class="dmeta"><b>${esc(p.name)}</b><small>could give ~${$(p.cap)} · ${esc(D.passionText(p.passion))}</small></div></div>
+          <div class="rel"><span>Readiness</span>${bar(p.ready)}<b>${Math.round(p.ready)}</b></div>
+          <div class="actions">${btn(p.cultivating ? '🌱 Cultivating ($1.5K/mo)' : '🌱 Start cultivating', 'cultivate', { pid: p.id }, 'sm ' + (p.cultivating ? 'on' : ''))}${meet ? btn('☕ Personal visit ($600)', 'personMeet', { pid: p.id }, 'sm') : `<span class="sub">Next visit ${U.fmtDate(p.lastMeet + 21)}</span>`}</div>
+          <div class="actions ask">${lv('low', 0.5)}${lv('mid', 1)}${lv('high', 1.6)}</div></div>`;
+      })
+      .join('');
+    const corps = s.dev.corps
+      .map((c) => {
+        const meet = s.day - c.lastMeet >= 21;
+        const askReady = s.day - c.lastAsk >= 120;
+        const habs = s.habitats.filter((h) => !h.construction && !h.sponsor && !h.donorName);
+        const deals = Object.entries(CP.DEALS)
+          .map(([k, D2]) => {
+            const o = Math.round(CP.odds(s, c, k) * 100);
+            const fit = CP.INTERESTS[c.interest].fits.includes(k);
+            const habSel = k === 'exhibit' ? `<select data-corphab="${c.id}">${habs.map((h) => `<option value="${h.id}">${esc(h.name)}</option>`).join('')}</select>` : '';
+            return `<div class="deal ${fit ? 'fit' : ''}"><div><b>${esc(D2.name)}</b>${fit ? ' <span class="dchip ok">⭐ fits their interest</span>' : ''}<br><small>${esc(D2.desc)} About ${$(CP.amount(s, c, k))}/yr.</small></div><div class="actions">${habSel}${askReady && (k !== 'exhibit' || habs.length) ? btn(`Pitch (${o}%)`, 'corpAsk', { id: c.id, deal: k }, 'sm' + (fit ? ' primary' : '')) : ''}</div></div>`;
+          })
+          .join('');
+        return `<div class="card corp ${c.risk > 0.5 ? 'risky' : ''}"><div class="donor-top"><span class="picon">🏢</span><div class="dmeta"><b>${esc(c.name)}</b><small>${esc(c.ind)} · giving budget ~${$(c.budget)}/yr · wants: <b>${CP.INTERESTS[c.interest].name}</b> · reputational risk: <b class="${c.risk > 0.5 ? 'bad' : c.risk > 0.25 ? 'warn' : 'good'}">${c.risk > 0.5 ? 'HIGH' : c.risk > 0.25 ? 'medium' : 'low'}</b></small></div></div>
+          <div class="rel"><span>Relationship</span>${bar(c.ready)}<b>${c.ready}</b></div>
+          <div class="actions">${meet ? Object.entries(CP.TOUCHES).map(([k, T]) => btn(`${T.icon} ${T.name} (${$(Math.round(T.cost * ZG.zoo(s).costMult))})`, 'corpTouch', { id: c.id, type: k }, 'sm')).join('') : `<span class="sub">Next meeting ${U.fmtDate(c.lastMeet + 21)}</span>`}</div>
+          <details ${c.ready >= 50 ? 'open' : ''}><summary>Pitch a deal${askReady ? '' : ` (after ${U.fmtDate(c.lastAsk + 120)})`}</summary>${deals}</details></div>`;
+      })
+      .join('');
+    const rReady = s.day - s.dev.lastResearch >= 30, cReady = s.day - s.dev.lastCorpResearch >= 30;
+    return `<p class="sub">Build your pipeline. Research finds new people and companies, cultivation warms them up, and when they're ready you ask. People who give join your donor roster. Companies that sign become sponsors.</p>
+      <h3>🏡 Individuals & families</h3>
+      <div class="actions">${rReady ? btn(`🔍 Research new prospects (${$(Math.round(4000 * ZG.zoo(s).costMult))})`, 'researchPeople', {}, 'sm primary') : `<span class="sub">Next research ${U.fmtDate(s.dev.lastResearch + 30)}</span>`}</div>
+      ${people || '<p class="sub">No individual prospects yet.</p>'}
+      <h3>🏢 Corporations</h3>
+      <div class="actions">${cReady ? btn(`🔍 Research local companies (${$(Math.round(3000 * ZG.zoo(s).costMult))})`, 'researchCorps', {}, 'sm primary') : `<span class="sub">Next research ${U.fmtDate(s.dev.lastCorpResearch + 30)}</span>`}</div>
+      ${corps || '<p class="sub">No corporate prospects yet. Research local companies to start.</p>'}
+      <p class="sub">Companies also approach you on their own sometimes. Those offers appear under 📑 Grants & sponsors.</p>`;
   };
 
   P.grantsView = function (s) {
@@ -743,6 +782,14 @@
   };
   A.campPitch = (s, d) => ZG.Campaigns.pitch(s, +d.cid, d.key);
   A.campAsk = (s, d) => ZG.Campaigns.ask(s, +d.cid, d.key, d.lvl);
+  A.researchPeople = (s) => ZG.Corps.researchPeople(s);
+  A.researchCorps = (s) => ZG.Corps.researchCorps(s);
+  A.personMeet = (s, d) => ZG.Corps.meetPerson(s, +d.pid);
+  A.corpTouch = (s, d) => ZG.Corps.touch(s, +d.id, d.type);
+  A.corpAsk = (s, d) => {
+    const sel = document.querySelector(`[data-corphab="${d.id}"]`);
+    return ZG.Corps.ask(s, +d.id, d.deal, sel ? +sel.value : null);
+  };
   A.treat = (s, d) => ZG.Animals.treat(s, +d.aid, d.lvl);
 
   // Habitat fixes
